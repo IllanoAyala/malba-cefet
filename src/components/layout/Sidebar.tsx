@@ -15,7 +15,8 @@ import {
   HelpCircle,
   Menu,
   X,
-  QrCode
+  QrCode,
+  PlayCircle
 } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import { Logo } from "@/components/ui/Logo"
@@ -44,16 +45,24 @@ export function Sidebar() {
   
   const navGroups = [
     {
-      label: "NAVEGAÇÃO",
-      roles: ['professor', 'aluno'],
+      label: "ADMINISTRAÇÃO",
+      roles: ['admin'],
       items: [
-        { href: "/", label: "Dashboard", icon: Compass, roles: ['aluno', 'professor'] },
-        { href: "/explorador", label: "Catálogo BNCC", icon: BookOpen, roles: ['aluno', 'professor'] },
-        { href: "/aluno/desempenho", label: "Desempenho", icon: BarChart2, roles: ['aluno'] },
-        { href: "/aluno/caderno", label: "Caderno de Revisão", icon: BookMarked, roles: ['aluno'] },
-        { href: "/professor", label: "Roteiros de Aula", icon: GraduationCap, roles: ['professor'] },
-        { href: "/professor/tutorial", label: "Tutorial Ético IA", icon: ShieldCheck, roles: ['professor'] },
-        { href: "/qrcode", label: "Acesso Mobile (QR)", icon: QrCode, roles: ['aluno', 'professor'] },
+        { href: "/admin", label: "Painel Admin & Contas", icon: ShieldCheck, roles: ['admin'] },
+      ]
+    },
+    {
+      label: "NAVEGAÇÃO",
+      roles: ['admin', 'professor', 'aluno'],
+      items: [
+        { href: "/", label: "Dashboard", icon: Compass, roles: ['admin', 'aluno', 'professor'] },
+        { href: "/materias", label: "Matérias & Videoaulas", icon: PlayCircle, roles: ['admin', 'aluno', 'professor'] },
+        { href: "/explorador", label: "Catálogo BNCC", icon: BookOpen, roles: ['admin', 'aluno', 'professor'] },
+        { href: "/aluno/desempenho", label: "Desempenho", icon: BarChart2, roles: ['admin', 'aluno'] },
+        { href: "/aluno/caderno", label: "Caderno de Revisão", icon: BookMarked, roles: ['admin', 'aluno'] },
+        { href: "/professor", label: "Roteiros de Aula", icon: GraduationCap, roles: ['admin', 'professor'] },
+        { href: "/professor/tutorial", label: "Tutorial Ético IA", icon: ShieldCheck, roles: ['admin', 'professor'] },
+        { href: "/qrcode", label: "Acesso Mobile (QR)", icon: QrCode, roles: ['admin', 'aluno', 'professor'] },
       ]
     }
   ]
@@ -120,13 +129,15 @@ export function Sidebar() {
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900 truncate max-w-[120px]">{name}</p>
-              <p className="text-[10px] text-slate-500 font-medium">{role === 'professor' ? 'Docente' : 'Discente'} &bull; {matricula}</p>
+              <p className="text-[10px] text-slate-500 font-medium">
+                {role === 'admin' ? 'Admin' : role === 'professor' ? 'Docente' : 'Discente'} &bull; {matricula}
+              </p>
             </div>
           </div>
           <button 
             onClick={() => signOut()}
             className="p-2 bg-transparent text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-            title="Sair do SIGAA"
+            title="Sair da Plataforma"
           >
             <LogOut className="w-4 h-4" />
           </button>

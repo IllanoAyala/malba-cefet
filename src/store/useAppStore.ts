@@ -16,6 +16,8 @@ interface AppState {
   role: 'aluno' | 'professor';
   tokenUsage: number;
   logoStyle: LogoStyle;
+  solvedQuestionIds: string[];
+  reviewQuestionIds: string[];
   
   // Actions
   setCurrentQuestionId: (id: string | null) => void;
@@ -26,6 +28,8 @@ interface AppState {
   setRole: (role: 'aluno' | 'professor') => void;
   addTokenUsage: (amount: number) => void;
   setLogoStyle: (style: LogoStyle) => void;
+  markQuestionResult: (questionId: string, isCorrect: boolean) => void;
+  syncQuestionProgress: (solvedIds: string[], reviewIds: string[]) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -37,6 +41,8 @@ export const useAppStore = create<AppState>()(
       role: 'professor',
       tokenUsage: 0,
       logoStyle: 'pure',
+      solvedQuestionIds: [],
+      reviewQuestionIds: [],
       
       setCurrentQuestionId: (id) => set({ currentQuestionId: id, chatHistory: [], currentSocraticStep: 0 }),
       addChatMessage: (msg) => set((state) => ({ 
@@ -57,10 +63,33 @@ export const useAppStore = create<AppState>()(
       setRole: (role) => set({ role }),
       addTokenUsage: (amount) => set((state) => ({ tokenUsage: state.tokenUsage + amount })),
       setLogoStyle: (style) => set({ logoStyle: style }),
+      markQuestionResult: (questionId, isCorrect) => set((state) => {
+        if (isCorrect) {
+          const nextSolved = Array.from(new Set([...state.solvedQuestionIds, questionId]));
+          const nextReview = state.reviewQuestionIds.filter((id) => id !== questionId);
+          return { solvedQuestionIds: nextSolved, reviewQuestionIds: nextReview };
+        } else {
+          if (state.solvedQuestionIds.includes(questionId)) return state;
+          const nextReview = Array.from(new Set([...state.reviewQuestionIds, questionId]));
+          return { reviewQuestionIds: nextReview };
+        }
+      }),
+      syncQuestionProgress: (solvedIds, reviewIds) => set((state) => {
+        const mergedSolved = Array.from(new Set([...state.solvedQuestionIds, ...solvedIds]));
+        const mergedReview = Array.from(
+          new Set([...state.reviewQuestionIds, ...reviewIds])
+        ).filter((id) => !mergedSolved.includes(id));
+        return { solvedQuestionIds: mergedSolved, reviewQuestionIds: mergedReview };
+      }),
     }),
     {
       name: 'mathai-storage',
-      partialize: (state) => ({ tokenUsage: state.tokenUsage, logoStyle: state.logoStyle }), // Save tokenUsage and logoStyle
+      partialize: (state) => ({
+        tokenUsage: state.tokenUsage,
+        logoStyle: state.logoStyle,
+        solvedQuestionIds: state.solvedQuestionIds,
+        reviewQuestionIds: state.reviewQuestionIds,
+      }),
     }
   )
 );

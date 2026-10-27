@@ -57,7 +57,7 @@ model User {
   matricula     String   @unique
   name          String
   passwordHash  String
-  role          String   @default("aluno") // 'aluno' ou 'professor'
+  role          String   @default("aluno") // 'aluno', 'professor' ou 'admin'
   createdAt     DateTime @default(now())
 }
 
@@ -70,4 +70,21 @@ model Report {
   createdAt   DateTime @default(now())
 
   question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+// Monitoramento de consumo de tokens da IA (Exclusivo Admin, com cálculo de reset por tempo)
+model TokenUsageLog {
+  id                   String   @id @default(uuid())
+  model                String   @default("openai/gpt-oss-120b")
+  promptTokens         Int      @default(0)
+  completionTokens     Int      @default(0)
+  totalTokens          Int      @default(0)
+  limitTokensTPM       Int?
+  remainingTokensTPM   Int?
+  resetTokensStr       String?
+  limitRequestsRPD     Int?
+  remainingRequestsRPD Int?
+  resetRequestsStr     String?
+  sessionId            String?
+  createdAt            DateTime @default(now())
 }

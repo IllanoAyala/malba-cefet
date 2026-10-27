@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Toggle } from "@/components/ui/toggle"
 import { Input } from "@/components/ui/input"
-import { Send, Bot, AlertCircle, CheckCircle2, ChevronLeft, Loader2, ArrowRight, Flag, X } from "lucide-react"
+import { Send, Bot, AlertCircle, CheckCircle2, ChevronLeft, Loader2, ArrowRight, Flag, X, PlayCircle, Sparkles, ExternalLink, Landmark, Award, FileText } from "lucide-react"
+import { getModuleForTopic } from "@/data/studyMaterials"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -28,6 +29,8 @@ export default function WorkspacePage() {
   const [reportText, setReportText] = useState('')
   const [isReporting, setIsReporting] = useState(false)
   const [reportSuccess, setReportSuccess] = useState(false)
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
+  const [videoModalSource, setVideoModalSource] = useState<"gtmat" | "secondary">("gtmat")
 
   const { 
     chatHistory, 
@@ -36,9 +39,17 @@ export default function WorkspacePage() {
     currentSocraticStep,
     advanceSocraticStep,
     setCurrentQuestionId,
-    tokenUsage,
-    addTokenUsage
+    solvedQuestionIds,
+    markQuestionResult,
   } = useAppStore()
+
+  const socraticStepLabels = [
+    "1. Observação da Realidade",
+    "2. Pontos-Chave",
+    "3. Teorização",
+    "4. Hipóteses de Solução",
+    "5. Aplicação à Realidade"
+  ]
 
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<'none' | 'success' | 'error'>('none')
@@ -132,7 +143,7 @@ export default function WorkspacePage() {
     }
   }
 
-  const callAI = async (messagesToSend: any[]) => {
+  const callAI = async (messagesToSend: any[], optionOverride?: string | null) => {
     setIsChatLoading(true)
     setHintsRequested(prev => prev + 1)
     
@@ -144,9 +155,19 @@ export default function WorkspacePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: messagesToSend.filter(m => m.role !== 'system'), // Omit system messages
+          messages: messagesToSend.filter(m => m.role !== 'system'),
           currentSocraticStep,
-          questionContext: question.enunciado
+          questionContext: question.enunciado,
+          sessionId,
+          questionData: {
+            enunciado: question.enunciado,
+            topicoBncc: question.topico_bncc,
+            habilidadeEnem: question.habilidade_enem,
+            alternativas: question.alternativas,
+            alternativaCorreta: question.alternativa_correta,
+            dicasSocraticas: question.dicas_socraticas,
+            selectedOption: optionOverride !== undefined ? optionOverride : selectedOption,
+          }
         })
       })
 
@@ -155,7 +176,6 @@ export default function WorkspacePage() {
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let fullText = ""
-      let detectedUsage = 0
 
       while (true) {
         const { done, value } = await reader.read()
@@ -163,22 +183,7 @@ export default function WorkspacePage() {
         
         const chunk = decoder.decode(value, { stream: true })
         fullText += chunk
-        
-        // Verifica se a tag oculta de uso de tokens chegou no final do stream
-        if (fullText.includes('__TOKENS:')) {
-          const match = fullText.match(/__TOKENS:(\d+)__/);
-          if (match) {
-            detectedUsage = parseInt(match[1], 10);
-            fullText = fullText.replace(match[0], ""); // Remove a tag do texto visível
-          }
-        }
-
         updateLastMessage(fullText)
-      }
-
-      // Adicionar o uso exato cobrado pela API
-      if (detectedUsage > 0) {
-        addTokenUsage(detectedUsage);
       }
 
     } catch (e) {
@@ -188,54 +193,66 @@ export default function WorkspacePage() {
     }
   }
 
+  const studyModule = getModuleForTopic(question?.topico_bncc)
+  const isAlreadySolved = solvedQuestionIds.includes(String(question?.id))
+
   const handleConfirm = () => {
     if (!selectedOption) return
     
     if (selectedOption === question.alternativa_correta) {
       setFeedback('success')
+      markQuestionResult(String(question.id), true)
       sendTelemetry(true)
     } else {
       setFeedback('error')
+      markQuestionResult(String(question.id), false)
       sendTelemetry(false)
       setMobileTab('chat')
       
       addChatMessage({
         role: 'system',
-        content: 'O aluno errou a alternativa. O Tutor Socrático foi acionado.'
+        content: `Alternativa ${selectedOption} incorreta • Tutor Socrático acionado`
       })
       
-      const newMessages = [...chatHistory, { role: 'user', content: 'Errei a alternativa. Não entendi bem, pode me dar a primeira dica?' }]
-      callAI(newMessages)
+      const chosenAlt = Array.isArray(question.alternativas)
+        ? question.alternativas.find((a: any) => a.letra === selectedOption)
+        : null
+      const userPrompt = chosenAlt
+        ? `Marquei a alternativa ${selectedOption} (${chosenAlt.texto}), mas estava incorreta. Pode me ajudar a entender por onde começar?`
+        : `Marquei a alternativa ${selectedOption}, mas estava incorreta. Pode me dar a primeira dica?`
+
+      addChatMessage({ role: 'user', content: userPrompt })
+      const newMessages = [...chatHistory, { role: 'user', content: userPrompt }]
+      callAI(newMessages, selectedOption)
       advanceSocraticStep()
     }
   }
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!inputValue.trim() || isChatLoading) return
-    
-    const userMsg = inputValue
+  const sendUserText = async (textToSend: string) => {
+    const trimmed = textToSend.trim()
+    if (!trimmed || isChatLoading) return
+
     setInputValue("")
-    
-    addChatMessage({ role: 'user', content: userMsg })
-    const newMessages = [...chatHistory, { role: 'user', content: userMsg }]
-    
+    addChatMessage({ role: 'user', content: trimmed })
+    const newMessages = [...chatHistory, { role: 'user', content: trimmed }]
+
     await callAI(newMessages)
     advanceSocraticStep()
   }
 
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault()
+    await sendUserText(inputValue)
+  }
+
   const quickReplies = [
-    "Dica sobre os dados",
-    "Qual fórmula usar?",
-    "Não entendi o enunciado"
+    "Quais são os dados principais?",
+    "Qual conceito ou fórmula usar?",
+    "Não entendi o enunciado, pode simplificar?"
   ]
 
   const handleQuickReply = (text: string) => {
-    setInputValue(text)
-    setTimeout(() => {
-      const fakeEvent = { preventDefault: () => {} } as React.FormEvent
-      handleSendMessage(fakeEvent)
-    }, 50)
+    sendUserText(text)
   }
 
   const handleNextQuestion = () => {
@@ -316,10 +333,26 @@ export default function WorkspacePage() {
             <Badge variant="outline">ENEM {question.ano_enem}</Badge>
             <Badge className="bg-slate-100 text-slate-700 hover:bg-slate-200">{question.ano_ensino_medio}</Badge>
             <Badge className="bg-blue-50 text-blue-700 border-blue-200">{question.topico_bncc}</Badge>
+            {isAlreadySolved && (
+              <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Dominada
+              </Badge>
+            )}
           </div>
-          <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0" onClick={() => setIsReportOpen(true)}>
-            <Flag className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Reportar Erro</span>
-          </Button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-blue-700 border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-xs font-bold"
+              onClick={() => setIsVideoModalOpen(true)}
+            >
+              <PlayCircle className="w-3.5 h-3.5 mr-1 text-red-500" />
+              <span>Videoaula &amp; Fórmulas</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-600 hover:bg-red-50 shrink-0" onClick={() => setIsReportOpen(true)}>
+              <Flag className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Reportar Erro</span>
+            </Button>
+          </div>
         </div>
 
         {isReportOpen && (
@@ -399,7 +432,8 @@ export default function WorkspacePage() {
                     remarkPlugins={[remarkGfm, remarkMath]}
                     rehypePlugins={[rehypeKatex]}
                     components={{
-                      p: ({node, ...props}) => <span {...props} />
+                      p: ({node, ...props}) => <span {...props} />,
+                      img: ({node, ...props}) => <img className="max-h-60 w-auto rounded-lg my-1 border border-slate-200 bg-white p-1.5 shadow-2xs" {...props} />
                     }}
                   >
                     {alt.texto}
@@ -507,29 +541,67 @@ export default function WorkspacePage() {
       <div className={`w-full lg:w-[450px] shrink-0 flex flex-col bg-slate-50 border-l border-slate-200 h-full ${
         mobileTab !== "chat" ? "hidden lg:flex" : "flex flex-1"
       }`}>
-        
-        {/* BARRA DE TOKENS PROVISÓRIA */}
-        <div className="px-4 py-2 bg-slate-100 border-b flex flex-col gap-1.5">
-          <div className="flex justify-between text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-            <span>Uso de Tokens (Groq Free)</span>
-            <span>{tokenUsage.toLocaleString('pt-BR')} / 100.000 TPD</span>
+        <div className="p-4 bg-white border-b flex justify-between items-center shadow-sm z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center shrink-0">
+              <Bot className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="font-bold text-slate-800 text-sm">Tutor Malba</h2>
+              <p className="text-[11px] text-blue-600 font-semibold">
+                {socraticStepLabels[Math.min(currentSocraticStep, 4)]}
+              </p>
+            </div>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-            <div 
-              className="bg-blue-500 h-1.5 rounded-full transition-all duration-500" 
-              style={{ width: `${Math.min((tokenUsage / 100000) * 100, 100)}%` }}
-            ></div>
+          <div className="flex items-center gap-1" title="Progresso no Arco de Maguerez">
+            {[0, 1, 2, 3, 4].map((step) => (
+              <span
+                key={step}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  step === Math.min(currentSocraticStep, 4)
+                    ? "w-4 bg-blue-600"
+                    : step < currentSocraticStep
+                    ? "w-2 bg-blue-300"
+                    : "w-1.5 bg-slate-200"
+                }`}
+              />
+            ))}
           </div>
         </div>
 
-        <div className="p-4 bg-white border-b flex justify-between items-center shadow-sm z-10">
-          <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-blue-600" />
-            <div>
-              <h2 className="font-bold text-slate-800">Tutor Malba</h2>
-              <p className="text-xs text-slate-500">Modo Socrático</p>
+        {/* PONTE DIRETA PARA VIDEOAULA & FÓRMULAS (DESTAQUE NA ETAPA 3: TEORIZAÇÃO OU APÓS ERRO) */}
+        <div
+          className={`px-4 py-2.5 border-b flex items-center justify-between gap-2 transition-colors ${
+            currentSocraticStep >= 2 || feedback === "error"
+              ? "bg-indigo-50/90 border-indigo-200/80"
+              : "bg-slate-100/80 border-slate-200/70"
+          }`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <PlayCircle
+              className={`w-4 h-4 shrink-0 ${
+                currentSocraticStep >= 2 || feedback === "error" ? "text-red-600 animate-pulse" : "text-red-500"
+              }`}
+            />
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold text-slate-800 truncate">
+                {currentSocraticStep >= 2
+                  ? `Etapa de Teorização: ${studyModule.title}`
+                  : `Base Teórica: ${studyModule.title}`}
+              </p>
+              <p className="text-[10px] text-slate-500 truncate">
+                {studyModule.channelName} &bull; {studyModule.duration} + Cola de Fórmulas
+              </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsVideoModalOpen(true)}
+            className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-bold shrink-0 shadow-2xs transition-colors cursor-pointer"
+          >
+            Ver Aula &amp; Fórmulas
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -552,12 +624,15 @@ export default function WorkspacePage() {
                   `}
                 >
                   <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
                     components={{
-                      p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />
+                      p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />
                     }}
                   >
-                    {msg.content}
+                    {msg.content
+                      .replace(/\\\((.*?)\\\)/g, '$$$1$$')
+                      .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')}
                   </ReactMarkdown>
                 </div>
               )}
@@ -601,6 +676,195 @@ export default function WorkspacePage() {
           </form>
         </div>
       </div>
+
+      {/* MODAL INLINE DE TEORIZAÇÃO (VIDEOAULA YOUTUBE + COLA DE FÓRMULAS) */}
+      {isVideoModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-3xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-auto">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+              <div className="flex items-center gap-2.5">
+                <PlayCircle className="w-5 h-5 text-red-600" />
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 block">
+                    Etapa 3 do Arco de Maguerez &bull; Apoio de Teorização
+                  </span>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                    {studyModule.title}
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVideoModalOpen(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              {/* Seletor Mídia Principal (GTMAT CEFET-MG) vs Mídia Secundária */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200/80">
+                <div className="inline-flex rounded-lg bg-slate-200/70 p-1 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setVideoModalSource("gtmat")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      videoModalSource === "gtmat"
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Landmark className="w-3.5 h-3.5" />
+                    <span>Mídia Principal: GTMAT CEFET-MG</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVideoModalSource("secondary")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      videoModalSource === "secondary"
+                        ? "bg-slate-800 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    <span>Mídia Secundária: Revisão Rápida</span>
+                  </button>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-500 px-2">
+                  {videoModalSource === "gtmat"
+                    ? `${studyModule.channelName} • ${studyModule.duration}`
+                    : `${studyModule.secondaryChannelName} • ${studyModule.secondaryDuration}`}
+                </span>
+              </div>
+
+              {/* Player YouTube */}
+              <div className="aspect-video w-full rounded-2xl overflow-hidden bg-slate-950 shadow-sm">
+                <iframe
+                  key={videoModalSource === "gtmat" ? studyModule.videoId : studyModule.secondaryVideoId}
+                  src={`https://www.youtube.com/embed/${
+                    videoModalSource === "gtmat" ? studyModule.videoId : studyModule.secondaryVideoId
+                  }?rel=0`}
+                  title={
+                    videoModalSource === "gtmat" ? studyModule.videoTitle : studyModule.secondaryVideoTitle
+                  }
+                  className="w-full h-full border-0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+
+              {/* Links Diretos GTMAT CEFET-MG & Apostila OBMEP */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <a
+                  href={studyModule.gtmatUnitUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-xl bg-blue-50/70 hover:bg-blue-100/70 border border-blue-200/80 flex items-center justify-between gap-2 transition-colors group"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 flex items-center gap-1">
+                      <Landmark className="w-3 h-3" /> GTMAT CEFET-MG
+                    </span>
+                    <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
+                      {studyModule.gtmatUnitTitle}
+                    </p>
+                    <span className="text-[10px] text-slate-500">
+                      Texto [CONT] &bull; Exercícios [EXE] &bull; Resoluções [EXRES]
+                    </span>
+                  </div>
+                  <ExternalLink className="w-4 h-4 text-blue-600 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+
+                <a
+                  href={studyModule.obmepApostila.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-3 rounded-xl bg-amber-50/70 hover:bg-amber-100/70 border border-amber-200/80 flex items-center justify-between gap-2 transition-colors group"
+                >
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 flex items-center gap-1">
+                      <Award className="w-3 h-3" /> {studyModule.obmepApostila.number} (PDF)
+                    </span>
+                    <p className="text-xs font-bold text-slate-800 truncate mt-0.5">
+                      {studyModule.obmepApostila.title}
+                    </p>
+                    <span className="text-[10px] text-slate-500 truncate block">
+                      {studyModule.obmepApostila.focus}
+                    </span>
+                  </div>
+                  <FileText className="w-4 h-4 text-amber-700 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                </a>
+              </div>
+
+              {/* Cola de Fórmulas do Tópico */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <span>Cola de Bolso &bull; Fórmulas deste Tema</span>
+                  </span>
+                  <a
+                    href={studyModule.playlistUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Mais vídeos no YouTube</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {studyModule.formulas.map((f, i) => (
+                    <div key={i} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5">
+                      <span className="text-[10px] font-bold text-blue-700 uppercase block">
+                        {f.label}
+                      </span>
+                      <div className="p-2 bg-white rounded-lg border border-slate-200/60 text-center text-xs font-semibold text-slate-900 overflow-x-auto">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[rehypeKatex]}
+                          components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                        >
+                          {f.formula}
+                        </ReactMarkdown>
+                      </div>
+                      <p className="text-[11px] text-slate-500 leading-snug">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[rehypeKatex]}
+                          components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                        >
+                          {f.tip}
+                        </ReactMarkdown>
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/materias?module=${studyModule.id}`)}
+                  className="text-xs font-bold text-slate-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Abrir módulo completo na aba Matérias</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <Button
+                  variant="blue"
+                  onClick={() => setIsVideoModalOpen(false)}
+                  className="text-xs font-bold h-9 px-5 rounded-xl"
+                >
+                  Voltar para a Questão
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

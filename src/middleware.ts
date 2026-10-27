@@ -28,6 +28,14 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/", nextUrl))
   }
 
+  // Proteção da rota /admin apenas para role === 'admin'
+  if (isLoggedIn && nextUrl.pathname.startsWith("/admin")) {
+    const role = (req.auth?.user as any)?.role
+    if (role !== "admin") {
+      return NextResponse.redirect(new URL("/", nextUrl))
+    }
+  }
+
   return NextResponse.next()
 })
 
