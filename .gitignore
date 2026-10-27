@@ -15,6 +15,7 @@
 # Local SQLite database & backups
 prisma/dev.db
 prisma/dev.db-journal
+prisma/seed_users.ts
 
 # Local tools, caches & IDE configs
 .vercel

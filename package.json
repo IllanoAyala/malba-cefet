@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "seed:users": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed_users.ts",
+    "seed:users": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed_users.ts",
     "tunnel": "cloudflared tunnel --protocol http2 --url http://localhost:3000"
   },
   "dependencies": {
@@ -49,6 +49,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
   }
 }
