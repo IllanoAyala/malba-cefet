@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Question {
+  id                  String   @id @default(uuid())
+  ano_enem            Int
+  ano_ensino_medio    String
+  topico_bncc         String
+  habilidade_enem     String
+  enunciado           String
+  alternativas        String   // JSON stringificado
+  alternativa_correta String
+  dicas_socraticas    String   // JSON stringificado
+  revisado_ia         Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  interactionLogs     InteractionLog[]
+  feedbacks           StudentFeedback[]
+  reports             Report[]
+}
+
+// Telemetria para a Pesquisa: Captura as interações com a IA
+model InteractionLog {
+  id              String   @id @default(uuid())
+  questionId      String
+  sessionId       String   // ID anônimo da sessão do aluno
+  timeSpentMs     Int      // Tempo total gasto na questão
+  hintsRequested  Int      // Quantas dicas socráticas foram pedidas
+  isCorrect       Boolean  // Se o aluno acertou ou desistiu
+  aiModeUsed      String   // 'socratic' ou 'commercial'
+  createdAt       DateTime @default(now())
+
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+// Feedback Qualitativo: Mede Engajamento e Motivação
+model StudentFeedback {
+  id              String   @id @default(uuid())
+  questionId      String
+  sessionId       String
+  feeling         String   // ex: 'confiante', 'confuso', 'aprendi_muito'
+  difficultyRating Int     // 1 (Muito Fácil) a 5 (Muito Difícil)
+  createdAt       DateTime @default(now())
+
+  question        Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+// Simulação do Usuário SIGAA
+model User {
+  id            String   @id @default(uuid())
+  matricula     String   @unique
+  name          String
+  passwordHash  String
+  role          String   @default("aluno") // 'aluno' ou 'professor'
+  createdAt     DateTime @default(now())
+}
+
+// Reportes de erros em questões (OCR, gabarito, formatação)
+model Report {
+  id          String   @id @default(uuid())
+  questionId  String
+  description String
+  status      String   @default("pending") // pending, fixed, rejected
+  createdAt   DateTime @default(now())
+
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
