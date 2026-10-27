@@ -1,9 +1,11 @@
 import NextAuth from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import bcrypt from "bcryptjs"
+import { prisma } from "@/lib/prisma"
+import { authConfig } from "@/auth.config"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  trustHost: true,
-  secret: process.env.AUTH_SECRET || "f655da03b1d3ef9745ddbd5811c03e2c",
+  ...authConfig,
   providers: [
     CredentialsProvider({
       name: "SIGAA CEFET-MG",
@@ -12,42 +14,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Senha", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.matricula || !credentials?.password) {
+        const matricula = (credentials?.matricula as string)?.trim()
+        const password = credentials?.password as string
+
+        if (!matricula || !password) {
           return null
         }
 
-        // Simulação do Banco do SIGAA
-        // Em um cenário real, aqui seria a validação contra o LDAP/banco usando Prisma
-        // Para o protótipo: testaremos com dois usuários fictícios
-        if (credentials.matricula === "professor" && credentials.password === "cefet123") {
-          return { id: "1", name: "Prof. Dr. Emerson Costa", role: "professor", matricula: "professor" }
+        const user = await prisma.user.findUnique({
+          where: { matricula }
+        })
+
+        if (!user) {
+          return null
         }
 
-        if (credentials.matricula === "aluno" && credentials.password === "cefet123") {
-          return { id: "2", name: "Illano Ayala", role: "aluno", matricula: "aluno" }
+        // Suporta tanto hash bcrypt ($2a$, $2b$, $2y$) quanto texto direto
+        // (caso um usuário seja adicionado manualmente pelo painel Tables da Neon)
+        const isBcryptHash = user.passwordHash.startsWith("$2")
+        const isPasswordValid = isBcryptHash
+          ? await bcrypt.compare(password, user.passwordHash)
+          : password === user.passwordHash
+
+        if (!isPasswordValid) {
+          return null
         }
 
-        return null
+        return {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          matricula: user.matricula
+        }
       }
     })
-  ],
-  pages: {
-    signIn: "/login",
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = (user as any).role
-        token.matricula = (user as any).matricula
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        (session.user as any).role = token.role;
-        (session.user as any).matricula = token.matricula;
-      }
-      return session
-    }
-  }
+  ]
 })

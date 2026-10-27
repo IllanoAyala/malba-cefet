@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/auth"
+import NextAuth from "next-auth"
+import { authConfig } from "@/auth.config"
+
+const { auth } = NextAuth(authConfig)
 
 // Rotas que não precisam de login
 const publicRoutes = ["/login", "/api/auth", "/api/tunnel", "/qrcode"]
