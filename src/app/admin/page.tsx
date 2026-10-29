@@ -318,7 +318,7 @@ export default function AdminDashboardPage() {
           <BookOpen className="w-4 h-4" />
           <span>Banco de Questões &amp; Revisão</span>
           <span className="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-            90 Questões
+            180 Questões
           </span>
         </button>
 

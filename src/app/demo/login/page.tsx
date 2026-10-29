@@ -432,7 +432,7 @@ export default function DemoLoginPage() {
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                     <span className="text-[11px] font-bold text-slate-400 uppercase">Incidência ENEM</span>
-                    <p className="text-base font-bold text-slate-900 mt-0.5">90 Questões Mapeadas</p>
+                    <p className="text-base font-bold text-slate-900 mt-0.5">180 Questões Mapeadas</p>
                   </div>
                   <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                     <span className="text-[11px] font-bold text-slate-400 uppercase">Matriz BNCC</span>

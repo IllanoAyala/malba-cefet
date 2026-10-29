@@ -106,7 +106,7 @@ export default function DashboardPage() {
   const ano1 = getQuestionsByYear("1º Ano")
   const ano2 = getQuestionsByYear("2º Ano")
   const ano3 = getQuestionsByYear("3º Ano")
-  const totalQuestions = enemQuestions.length || 90
+  const totalQuestions = enemQuestions.length || 180
   const totalSolved = enemQuestions.filter((q) => solvedQuestionIds.includes(String(q.id))).length
   const masteryPercent = totalQuestions > 0 ? Math.round((totalSolved / totalQuestions) * 100) : 0
 

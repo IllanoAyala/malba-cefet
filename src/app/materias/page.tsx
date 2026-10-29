@@ -227,7 +227,7 @@ function MateriasContent() {
                 {questions.length > 0 ? `${Math.round((totalSolvedOverall / questions.length) * 100)}%` : "0%"}
               </div>
               <span className="text-[11px] font-semibold text-slate-600">
-                <strong className="text-slate-900">{totalSolvedOverall}</strong> de {questions.length || 90} questões dominadas
+                <strong className="text-slate-900">{totalSolvedOverall}</strong> de {questions.length || 180} questões dominadas
               </span>
             </div>
           </div>

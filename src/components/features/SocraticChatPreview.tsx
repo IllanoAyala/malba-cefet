@@ -110,7 +110,7 @@ export function SocraticChatPreview() {
 
       {/* Rodapé com os números da plataforma */}
       <div className="px-4 py-2 border-t border-slate-100 text-[11px] text-slate-500 flex flex-wrap gap-x-2">
-        <span><strong className="text-slate-700">90</strong> questões ENEM</span>
+        <span><strong className="text-slate-700">180</strong> questões ENEM</span>
         <span className="text-slate-300">•</span>
         <span><strong className="text-slate-700">29</strong> tópicos BNCC</span>
         <span className="text-slate-300">•</span>

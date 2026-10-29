@@ -154,7 +154,7 @@ export default function DemoCatalogoPage() {
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Banco Curricular ENEM</span>
                     <span className="text-slate-300">&bull;</span>
-                    <span className="text-xs text-slate-500 font-medium">90 Problemas Mapeados na BNCC</span>
+                    <span className="text-xs text-slate-500 font-medium">180 Problemas Mapeados na BNCC</span>
                   </div>
                   <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                     Catálogo de Questões
@@ -225,7 +225,7 @@ export default function DemoCatalogoPage() {
                       <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
                         selectedYear === yr ? "bg-white/20 text-white" : "bg-slate-200 text-slate-500"
                       }`}>
-                        {yr === "Todos" ? enemQuestions.length || 90 : yr === "1º Ano" ? count1 : yr === "2º Ano" ? count2 : count3}
+                        {yr === "Todos" ? enemQuestions.length || 180 : yr === "1º Ano" ? count1 : yr === "2º Ano" ? count2 : count3}
                       </span>
                     </button>
                   ))}
@@ -249,7 +249,7 @@ export default function DemoCatalogoPage() {
                 </div>
 
                 <div className="flex items-center gap-3 text-slate-500">
-                  <span>Exibindo <strong>{filteredQuestions.length}</strong> de {enemQuestions.length || 90}</span>
+                  <span>Exibindo <strong>{filteredQuestions.length}</strong> de {enemQuestions.length || 180}</span>
                   {(searchQuery || selectedYear !== "Todos" || selectedTopic !== "Todos") && (
                     <button
                       onClick={() => {
@@ -484,7 +484,7 @@ export default function DemoCatalogoPage() {
               <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Trilha Estruturada</span>
               <h1 className="text-3xl font-black text-slate-900 tracking-tight">Módulos Curriculares do ENEM</h1>
               <p className="text-xs sm:text-sm text-slate-500 font-light">
-                Navegue pelas 90 questões organizadas por ano escolar e nível de complexidade da BNCC.
+                Navegue pelas 180 questões organizadas por ano escolar e nível de complexidade da BNCC.
               </p>
 
               <div className="relative pt-2">

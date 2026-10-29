@@ -244,7 +244,7 @@ export default function DashboardDemoPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Trilha Curricular do Ensino Médio</h3>
-                  <p className="text-xs text-slate-500">90 problemas catalogados na BNCC e Matriz ENEM</p>
+                  <p className="text-xs text-slate-500">180 problemas catalogados na BNCC e Matriz ENEM</p>
                 </div>
                 <Link href="/explorador" className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1">
                   Ver todo o banco <ArrowRight className="w-3.5 h-3.5" />
@@ -370,14 +370,14 @@ export default function DashboardDemoPage() {
             <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-black text-slate-900 tracking-tight">Painel Curricular &bull; Visão Geral</h1>
-                <p className="text-xs text-slate-500">Mapeamento estruturado das 90 questões e telemetria socrática</p>
+                <p className="text-xs text-slate-500">Mapeamento estruturado das 180 questões e telemetria socrática</p>
               </div>
 
               {/* 3 KPIs em Linha */}
               <div className="flex items-center gap-5 text-xs">
                 <div>
                   <span className="block text-slate-400 font-medium text-[11px]">Banco ENEM</span>
-                  <span className="text-base font-extrabold text-slate-900">90 Questões</span>
+                  <span className="text-base font-extrabold text-slate-900">180 Questões</span>
                 </div>
                 <div className="h-8 w-px bg-slate-200"></div>
                 <div>
@@ -644,7 +644,7 @@ export default function DashboardDemoPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
                     <span className="text-[11px] text-slate-500 font-medium">Questões Mapeadas</span>
-                    <p className="text-2xl font-black text-slate-900 mt-1">90</p>
+                    <p className="text-2xl font-black text-slate-900 mt-1">180</p>
                     <span className="text-[10px] text-emerald-600 font-bold">100% Curadas</span>
                   </div>
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
