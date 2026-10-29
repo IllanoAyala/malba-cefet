@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
 import {
   STUDY_MODULES,
@@ -28,8 +29,13 @@ import {
   FileText,
   Award,
   Video,
+  Landmark,
+  Zap,
+  ChevronDown,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MathSnippet } from "@/components/ui/MathSnippet"
+import { TabGuard } from "@/components/layout/TabGuard"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -39,6 +45,8 @@ import "katex/dist/katex.min.css"
 function MateriasContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const matricula = (session?.user as any)?.matricula
   const topicParam = searchParams.get("topic")
   const moduleParam = searchParams.get("module")
 
@@ -50,6 +58,8 @@ function MateriasContent() {
   const [activeModuleId, setActiveModuleId] = useState<string>(STUDY_MODULES[0].id)
   // Mídia Principal ('gtmat') vs Mídia Secundária ('secondary')
   const [mediaSource, setMediaSource] = useState<"gtmat" | "secondary">("gtmat")
+  // Aba ativa no estúdio de aprendizagem: questões, fórmulas ou materiais
+  const [activeTab, setActiveTab] = useState<"questoes" | "formulas" | "materiais">("questoes")
 
   useEffect(() => {
     const sessionId =
@@ -64,12 +74,17 @@ function MateriasContent() {
           setQuestions(qData)
         }
         if (tData && Array.isArray(tData.solvedQuestionIds)) {
-          syncQuestionProgress(tData.solvedQuestionIds, tData.reviewQuestionIds || [])
+          syncQuestionProgress(
+            tData.solvedQuestionIds,
+            tData.reviewQuestionIds || [],
+            matricula,
+            tData.streak
+          )
         }
       })
       .catch((e) => console.error("Erro ao carregar matérias:", e))
       .finally(() => setIsLoading(false))
-  }, [])
+  }, [matricula])
 
   useEffect(() => {
     if (moduleParam) {
@@ -140,78 +155,89 @@ function MateriasContent() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans">
       {/* ================= CABEÇALHO DE MATÉRIAS, GTMAT CEFET-MG & OBMEP ================= */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        <div className="space-y-2 max-w-2xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold uppercase tracking-wider">
-              <PlayCircle className="w-3.5 h-3.5 text-blue-600" />
-              <span>Etapa 3 do Arco de Maguerez &bull; Teorização &amp; Aprofundamento</span>
-            </span>
-            <a
-              href={GTMAT_PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors"
-            >
-              <span>Portal GTMAT CEFET-MG</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-            <a
-              href={OBMEP_PORTAL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition-colors"
-            >
-              <span>Apostilas OBMEP</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Matérias de Matemática &bull; GTMAT CEFET-MG &amp; OBMEP
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-600 font-light leading-relaxed">
-            Estude a Matemática do Ensino Médio de forma ampla: videoaulas oficiais do <strong>GTMAT CEFET-MG</strong> como mídia principal, vídeos complementares de revisão, apostilas de aprofundamento da <strong>OBMEP (PIC)</strong> e orientações para docentes.
-          </p>
-        </div>
+      {/* ================= CABEÇALHO MODERNO DE MATÉRIAS & VIDEOAULAS ================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
+        {/* Detalhe de fundo suave (Glow sutil) */}
+        <div className="absolute top-0 right-0 w-96 h-full bg-gradient-to-l from-blue-50/50 via-slate-50/20 to-transparent pointer-events-none" />
 
-        {/* Progresso Global do Estudante + Seletor de Série */}
-        <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-3 shrink-0">
-          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl px-4 py-2.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-xs">
-              {questions.length > 0 ? `${Math.round((totalSolvedOverall / questions.length) * 100)}%` : "0%"}
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                Progresso em Problemas Práticos
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          {/* Lado Esquerdo: Identidade do Acervo + Título + Descrição Enxuta */}
+          <div className="space-y-1.5 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/80 text-blue-700 text-[11px] font-bold tracking-tight">
+                <Landmark className="w-3.5 h-3.5 text-blue-600" />
+                <span>GTMAT CEFET-MG &bull; 24 Unidades</span>
               </span>
-              <span className="text-xs font-extrabold text-slate-900">
-                {totalSolvedOverall} de {questions.length || 90} questões dominadas
-              </span>
-            </div>
-          </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
-            {(["Todos", "1º Ano", "2º Ano", "3º Ano"] as const).map((yr) => (
-              <button
-                key={yr}
-                onClick={() => setSelectedYear(yr)}
-                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                  selectedYear === yr
-                    ? "bg-white text-blue-700 shadow-xs"
-                    : "text-slate-500 hover:text-slate-900"
-                }`}
+              <a
+                href={GTMAT_PORTAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200/80 text-slate-600 hover:text-slate-900 text-[11px] font-semibold transition-colors"
+                title="Abrir Portal GTMAT"
               >
-                {yr}
-              </button>
-            ))}
+                <span>Portal Oficial</span>
+                <ExternalLink className="w-3 h-3 text-slate-400" />
+              </a>
+
+              <a
+                href={OBMEP_PORTAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 hover:bg-amber-100/80 text-amber-800 border border-amber-200/80 text-[11px] font-semibold transition-colors"
+                title="Abrir Apostilas OBMEP"
+              >
+                <Award className="w-3 h-3 text-amber-600" />
+                <span>OBMEP</span>
+                <ExternalLink className="w-3 h-3 text-amber-500" />
+              </a>
+            </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              Matérias &amp; Videoaulas
+            </h1>
+
+            <p className="text-xs sm:text-sm text-slate-500 font-normal leading-relaxed">
+              Currículo oficial estruturado por séries: videoaulas conceituais do CEFET-MG, revisões complementares e questões contextualizadas do ENEM.
+            </p>
+          </div>
+
+          {/* Lado Direito: Filtro de Série (Segmented Control) + Mini-Card de Progresso */}
+          <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-2.5 shrink-0">
+            {/* Seletor de Série (Segmented Tabs Moderno) */}
+            <div className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 text-xs font-bold shadow-2xs">
+              {(["Todos", "1º Ano", "2º Ano", "3º Ano"] as const).map((yr) => (
+                <button
+                  key={yr}
+                  onClick={() => setSelectedYear(yr)}
+                  className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                    selectedYear === yr
+                      ? "bg-white text-blue-700 shadow-xs font-extrabold"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  {yr}
+                </button>
+              ))}
+            </div>
+
+            {/* Pill de Progresso Compacto */}
+            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200/70">
+              <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-[10px]">
+                {questions.length > 0 ? `${Math.round((totalSolvedOverall / questions.length) * 100)}%` : "0%"}
+              </div>
+              <span className="text-[11px] font-semibold text-slate-600">
+                <strong className="text-slate-900">{totalSolvedOverall}</strong> de {questions.length || 90} questões dominadas
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ================= GRID PRINCIPAL: LISTA DE MATÉRIAS (ESQ) + ESTÚDIO DE AULA (DIR) ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* COLUNA ESQUERDA (4 COLUNAS): TRILHA DE MÓDULOS */}
-        <div className="lg:col-span-4 space-y-3">
+        {/* COLUNA ESQUERDA (4 COLUNAS): TRILHA DE MÓDULOS (COM SCROLLBAR E FIXAÇÃO STICKY) */}
+        <div className="lg:col-span-4 space-y-3 lg:sticky lg:top-6 self-start">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -220,7 +246,7 @@ function MateriasContent() {
             <span className="text-[11px] text-slate-400 font-medium">1ª a 3ª Série</span>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-2.5 max-h-[calc(100vh-140px)] overflow-y-auto pr-1.5 custom-scrollbar">
             {filteredModules.map((mod) => {
               const modQuestions = getModuleQuestions(mod)
               const solvedCount = modQuestions.filter((q) =>
@@ -319,28 +345,30 @@ function MateriasContent() {
                 <span className="font-bold tracking-tight truncate">{currentVideoTitle}</span>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl shrink-0">
+              <div className="flex items-center bg-slate-950/90 border border-slate-800 p-1 rounded-xl shrink-0 gap-1">
                 <button
                   type="button"
                   onClick={() => setMediaSource("gtmat")}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                     mediaSource === "gtmat"
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "text-slate-300 hover:text-white"
+                      ? "bg-blue-600 text-white shadow-xs font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                   }`}
                 >
-                  <span>🏛️ Mídia Principal: GTMAT CEFET-MG</span>
+                  <Landmark className={`w-3.5 h-3.5 ${mediaSource === "gtmat" ? "text-blue-200" : "text-slate-400"}`} />
+                  <span>GTMAT &bull; Aula Completa</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setMediaSource("secondary")}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                     mediaSource === "secondary"
-                      ? "bg-blue-600 text-white shadow-xs"
-                      : "text-slate-300 hover:text-white"
+                      ? "bg-blue-600 text-white shadow-xs font-bold"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                   }`}
                 >
-                  <span>▶️ Mídia Secundária: Revisão Rápida</span>
+                  <Zap className={`w-3.5 h-3.5 ${mediaSource === "secondary" ? "text-amber-300" : "text-slate-400"}`} />
+                  <span>Revisão Rápida</span>
                 </button>
               </div>
             </div>
@@ -395,336 +423,327 @@ function MateriasContent() {
                 {activeModule.summary}
               </p>
 
-              {/* ================= BLOCO DUPLO: GTMAT CEFET-MG + APOSTILA OBMEP ================= */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                {/* Card GTMAT CEFET-MG */}
-                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 flex flex-col justify-between space-y-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200">
-                        Fonte Institucional • CEFET-MG
+              {/* ================= ABAS DO ESTÚDIO: QUESTÕES, FÓRMULAS & MATERIAIS ================= */}
+              <div className="pt-2 border-t border-slate-100 space-y-4">
+                {/* Seletor de Abas Segmentado */}
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/80 text-xs font-bold shadow-2xs">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("questoes")}
+                    className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      activeTab === "questoes"
+                        ? "bg-white text-blue-700 shadow-xs font-extrabold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Questões ENEM ({activeModuleQuestions.length})</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("formulas")}
+                    className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      activeTab === "formulas"
+                        ? "bg-white text-blue-700 shadow-xs font-extrabold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Fórmulas &amp; Dicas</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("materiais")}
+                    className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                      activeTab === "materiais"
+                        ? "bg-white text-blue-700 shadow-xs font-extrabold"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Acervo GTMAT &amp; OBMEP</span>
+                  </button>
+                </div>
+
+                {/* CONTEÚDO DA ABA 1: QUESTÕES DO ENEM */}
+                {activeTab === "questoes" && (
+                  <div className="space-y-3 animate-fade-in-up">
+                    <div className="flex items-center justify-between text-xs px-1">
+                      <span className="font-semibold text-slate-700">
+                        Problemas Práticos &bull;{" "}
+                        <strong className="text-emerald-700">
+                          {activeModuleQuestions.filter((q) => solvedQuestionIds.includes(String(q.id))).length} de{" "}
+                          {activeModuleQuestions.length} dominados
+                        </strong>
                       </span>
-                      <span className="text-[10px] font-bold text-slate-500">
-                        [CONT] [VAC] [EXE] [EXRES]
-                      </span>
+                      {activeModuleQuestions.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handlePracticeModule}
+                          className="text-[11px] font-bold text-blue-600 hover:text-blue-700 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                        >
+                          <Shuffle className="w-3 h-3" />
+                          <span>Modo Aleatório</span>
+                        </button>
+                      )}
                     </div>
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                      {activeModule.gtmatUnitTitle}
-                    </h4>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      Acesse a apostila teórica em PDF (<code>[CONT]</code>), videoaulas (<code>[VAC]</code>), listas de exercícios (<code>[EXE]</code>) e resoluções comentadas (<code>[EXRES]</code>) elaboradas pelos professores do GTMAT/CEFET-MG.
-                    </p>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <a
-                      href={activeModule.gtmatUnitUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Abrir Unidade no GTMAT</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <a
-                      href={GTMAT_PORTAL_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors"
-                    >
-                      <span>Sumário Geral GTMAT</span>
-                    </a>
-                  </div>
-                </div>
-
-                {/* Card Apostila OBMEP / PIC */}
-                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex flex-col justify-between space-y-3">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-white px-2 py-0.5 rounded-full border border-amber-200">
-                        {activeModule.obmepApostila.number}
-                      </span>
-                      <span className="text-[10px] font-semibold text-amber-700">
-                        Prof. {activeModule.obmepApostila.authors}
-                      </span>
-                    </div>
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-900">
-                      Apostila OBMEP: {activeModule.obmepApostila.title}
-                    </h4>
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      {activeModule.obmepApostila.focus}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <a
-                      href={activeModule.obmepApostila.pdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold inline-flex items-center gap-1.5 transition-colors shadow-2xs"
-                    >
-                      <Award className="w-3.5 h-3.5" />
-                      <span>Abrir PDF da Apostila</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
-                    <a
-                      href={OBMEP_PORTAL_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="h-8 px-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors"
-                    >
-                      <span>Todas as Apostilas</span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              {/* Guia de Aplicação para Professores + Dica Conceitual */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-start gap-3">
-                  <GraduationCap className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-slate-700 space-y-1">
-                    <span className="font-bold uppercase tracking-wider text-[10px] text-blue-700 block">
-                      Sugestão Metodológica para Professores
-                    </span>
-                    <p className="leading-relaxed">{activeModule.teacherGuide}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 flex items-start gap-3">
-                  <Lightbulb className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-emerald-950 space-y-1">
-                    <span className="font-bold uppercase tracking-wider text-[10px] text-emerald-700 block">
-                      Síntese Conceitual &bull; Ponto-Chave
-                    </span>
-                    <div className="prose prose-sm max-w-none text-emerald-900 leading-relaxed">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
-                        components={{ p: ({ node, ...props }) => <span {...props} /> }}
-                      >
-                        {activeModule.enemTip}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CARD 2: COLA DE BOLSO (FÓRMULAS & RELAÇÕES ESSENCIAIS) */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Resumo Formal &bull; Fórmulas, Teoremas e Relações
-                </h3>
-              </div>
-              <span className="text-[11px] text-slate-400 font-medium">
-                Base para a Etapa 3 (Teorização)
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {activeModule.formulas.map((f, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-3"
-                >
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">
-                      {f.label}
-                    </span>
-                    <div className="p-2.5 bg-white rounded-xl border border-slate-200/70 text-center overflow-x-auto text-sm font-semibold text-slate-900">
-                      <ReactMarkdown
-                        remarkPlugins={[remarkGfm, remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
-                        components={{ p: ({ node, ...props }) => <span {...props} /> }}
-                      >
-                        {f.formula}
-                      </ReactMarkdown>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-500 leading-relaxed">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                      components={{ p: ({ node, ...props }) => <span {...props} /> }}
-                    >
-                      {f.tip}
-                    </ReactMarkdown>
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CARD 3: PROBLEMAS CONTEXTUALIZADOS DESTE TEMA */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Problemas Contextualizados deste Módulo ({activeSolvedCount}/{activeModuleQuestions.length} dominados)
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Clique em qualquer problema para praticar a resolução mediada pelo Tutor Socrático Malba
-                </p>
-              </div>
-
-              <Button
-                variant="outline"
-                onClick={() =>
-                  router.push(
-                    `/explorador?topic=${encodeURIComponent(activeModule.relatedTopics[0])}`
-                  )
-                }
-                className="h-8 px-3 text-xs font-bold rounded-xl border-slate-200 self-start sm:self-auto"
-              >
-                <span>Abrir no Catálogo</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
-              </Button>
-            </div>
-
-            {isLoading ? (
-              <div className="py-10 flex items-center justify-center text-slate-400 text-xs gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-                <span>Carregando questões vinculadas...</span>
-              </div>
-            ) : activeModuleQuestions.length === 0 ? (
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span>
-                  Este é um módulo de aprofundamento curricular do Ensino Médio (GTMAT CEFET-MG). Utilize a apostila <code>[CONT]</code> e a lista de exercícios <code>[EXE]</code> diretamente no portal do GTMAT!
-                </span>
-                <a
-                  href={activeModule.gtmatUnitUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 rounded-xl bg-blue-600 text-white font-bold text-xs shrink-0 inline-flex items-center gap-1"
-                >
-                  <span>Acessar Lista [EXE] GTMAT</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
-            ) : (
-              <div className="divide-y divide-slate-100">
-                {activeModuleQuestions.map((q) => {
-                  const qId = String(q.id)
-                  const isSolved = solvedQuestionIds.includes(qId)
-                  const isReview = !isSolved && reviewQuestionIds.includes(qId)
-                  const skillCode = (q.habilidade_enem || "").split("-")[0].trim()
-
-                  return (
-                    <div
-                      key={q.id}
-                      onClick={() => router.push(`/workspace/${q.id}`)}
-                      className="py-3.5 px-3 -mx-3 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-                    >
-                      <div className="space-y-1 max-w-xl">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isSolved ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Dominada
-                            </span>
-                          ) : isReview ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              <RotateCcw className="w-3 h-3" />
-                              Revisar
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500">
-                              <Circle className="w-2.5 h-2.5" />
-                              Não tentada
-                            </span>
-                          )}
-
-                          <span className="text-[11px] font-bold text-slate-700">
-                            {q.topico_bncc}
-                          </span>
-                          <span className="text-slate-300">&bull;</span>
-                          <span className="text-[11px] font-semibold text-slate-400">
-                            ENEM {q.ano_enem}
-                          </span>
-                          {skillCode && (
-                            <>
-                              <span className="text-slate-300">&bull;</span>
-                              <span className="text-[11px] font-semibold text-blue-600">
-                                {skillCode}
-                              </span>
-                            </>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-500 line-clamp-1">
-                          {q.enunciado}
+                    {activeModuleQuestions.length === 0 ? (
+                      <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200/80">
+                        <Sparkles className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                        <h4 className="text-sm font-bold text-slate-800">
+                          Tópico de Aprofundamento Teórico
+                        </h4>
+                        <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                          Este módulo cobre a fundamentação do currículo GTMAT CEFET-MG e OBMEP. Acesse as abas <strong>Fórmulas &amp; Dicas</strong> e <strong>Acervo GTMAT &amp; OBMEP</strong> para materiais de apoio.
                         </p>
                       </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1.5 custom-scrollbar">
+                        {activeModuleQuestions.map((q) => {
+                          const isSolved = solvedQuestionIds.includes(String(q.id))
+                          const isReview = reviewQuestionIds.includes(String(q.id))
+                          const skillCode = q.habilidade_bncc ? `H${q.habilidade_bncc}` : null
 
-                      <span className="text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1 shrink-0">
-                        <span>{isSolved ? "Rever Problema" : "Resolver Agora"}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
+                          return (
+                            <div
+                              key={q.id}
+                              onClick={() => router.push(`/workspace/${q.id}`)}
+                              className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 group ${
+                                isSolved
+                                  ? "bg-emerald-50/40 border-emerald-200/70 hover:bg-emerald-50/80"
+                                  : isReview
+                                  ? "bg-amber-50/40 border-amber-200/70 hover:bg-amber-50/80"
+                                  : "bg-white border-slate-200/80 hover:border-blue-300 hover:bg-slate-50/80"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                {isSolved ? (
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                ) : isReview ? (
+                                  <RotateCcw className="w-4 h-4 text-amber-600 shrink-0" />
+                                ) : (
+                                  <Circle className="w-4 h-4 text-slate-300 group-hover:text-blue-500 shrink-0" />
+                                )}
+
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[11px] font-bold text-slate-800">
+                                      {q.topico_bncc || "Matemática"}
+                                    </span>
+                                    <span className="text-[10px] font-semibold text-slate-400">
+                                      ENEM {q.ano_enem}
+                                    </span>
+                                    {skillCode && (
+                                      <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200/60">
+                                        {skillCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <MathSnippet
+                                    content={q.enunciado}
+                                    className="text-xs text-slate-500 line-clamp-1 mt-0.5"
+                                  />
+                                </div>
+                              </div>
+
+                              <span className="text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-1 shrink-0">
+                                <span>{isSolved ? "Rever" : "Resolver"}</span>
+                                <ArrowRight className="w-3.5 h-3.5" />
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* CONTEÚDO DA ABA 2: FÓRMULAS & DICAS */}
+                {activeTab === "formulas" && (
+                  <div className="space-y-3 animate-fade-in-up">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto pr-1.5 custom-scrollbar">
+                      {activeModule.formulas.map((f, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col justify-between space-y-2.5"
+                        >
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wider block">
+                              {f.label}
+                            </span>
+                            <div className="p-2.5 bg-white rounded-xl border border-slate-200/70 text-center overflow-x-auto text-sm font-semibold text-slate-900">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm, remarkMath]}
+                                rehypePlugins={[rehypeKatex]}
+                                components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                              >
+                                {f.formula}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                          <p className="text-[11px] text-slate-500 leading-relaxed">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                            >
+                              {f.tip}
+                            </ReactMarkdown>
+                          </p>
+                        </div>
+                      ))}
+
+                      {/* Dica de Ouro ENEM */}
+                      <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 flex items-start gap-2.5">
+                        <Lightbulb className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-emerald-950 space-y-1">
+                          <span className="font-bold uppercase tracking-wider text-[10px] text-emerald-700 block">
+                            Síntese &bull; Dica de Ouro para o ENEM
+                          </span>
+                          <div className="prose prose-sm max-w-none text-emerald-900 text-[11px] leading-relaxed">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                              components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                            >
+                              {activeModule.enemTip}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Guia Pedagógico Docente */}
+                      <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-2.5">
+                        <GraduationCap className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="text-xs text-blue-950 space-y-1">
+                          <span className="font-bold uppercase tracking-wider text-[10px] text-blue-700 block">
+                            Sugestão Metodológica para Professores
+                          </span>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            {activeModule.teacherGuide}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+                  </div>
+                )}
 
-      {/* ================= BIBLIOTECA COMPLETA DE APOSTILAS OBMEP (PIC) ================= */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
-            <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">
-              Aprofundamento Olímpico &amp; Iniciação Científica Jr.
-            </span>
-            <h2 className="text-xl font-black text-slate-900">
-              Acervo Completo de Apostilas da OBMEP (PIC)
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Publicações gratuitas da OBMEP/IMPA recomendadas para aprofundamento teórico de estudantes e oficinas docentes
-            </p>
-          </div>
-          <a
-            href={OBMEP_PORTAL_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-9 px-4 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold inline-flex items-center gap-1.5 self-start sm:self-auto transition-colors"
-          >
-            <span>Portal Oficial OBMEP</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
+                {/* CONTEÚDO DA ABA 3: ACERVO GTMAT & OBMEP */}
+                {activeTab === "materiais" && (
+                  <div className="space-y-4 animate-fade-in-up max-h-[380px] overflow-y-auto pr-1.5 custom-scrollbar">
+                    {/* Card Principal: Unidade GTMAT + Apostila Recomendada */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Card GTMAT */}
+                      <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 flex flex-col justify-between space-y-3">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-white px-2 py-0.5 rounded-full border border-blue-200">
+                              CEFET-MG &bull; {activeModule.year}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-500">[CONT] [VAC] [EXE]</span>
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900">{activeModule.gtmatUnitTitle}</h4>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">
+                            Acesse a apostila oficial em PDF, videoaulas conceituais e listas de exercícios elaboradas pelos professores do CEFET-MG.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <a
+                            href={activeModule.gtmatUnitUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-8 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>Abrir Unidade no GTMAT</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                          <a
+                            href={GTMAT_PORTAL_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-8 px-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-semibold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <span>Sumário Geral</span>
+                          </a>
+                        </div>
+                      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5">
-          {OBMEP_APOSTILAS.map((ap, i) => (
-            <a
-              key={i}
-              href={ap.pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group p-4 rounded-2xl bg-slate-50/80 hover:bg-amber-50/50 border border-slate-200/80 hover:border-amber-300 transition-all flex flex-col justify-between space-y-3"
-            >
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">
-                  {ap.number}
-                </span>
-                <h4 className="text-xs font-bold text-slate-900 group-hover:text-amber-900 leading-snug">
-                  {ap.title}
-                </h4>
-                <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-3">
-                  {ap.focus}
-                </p>
+                      {/* Card Apostila OBMEP Recomendada */}
+                      <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 flex flex-col justify-between space-y-3">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-white px-2 py-0.5 rounded-full border border-amber-200">
+                              {activeModule.obmepApostila.number}
+                            </span>
+                            <span className="text-[10px] font-semibold text-amber-700">Prof. {activeModule.obmepApostila.authors}</span>
+                          </div>
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900">Apostila OBMEP: {activeModule.obmepApostila.title}</h4>
+                          <p className="text-[11px] text-slate-600 leading-relaxed">{activeModule.obmepApostila.focus}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <a
+                            href={activeModule.obmepApostila.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="h-8 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold inline-flex items-center gap-1.5 shadow-2xs transition-colors"
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Abrir PDF da Apostila</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Acervo Completo de Apostilas OBMEP (PIC) */}
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Award className="w-4 h-4 text-amber-600" />
+                          <span className="text-xs font-bold text-slate-900">Biblioteca Completa de Apostilas OBMEP (PIC)</span>
+                        </div>
+                        <a
+                          href={OBMEP_PORTAL_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[11px] font-bold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1 transition-colors"
+                        >
+                          <span>Portal IMPA</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                        {OBMEP_APOSTILAS.map((ap, i) => (
+                          <a
+                            key={i}
+                            href={ap.pdfUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-amber-300 hover:bg-amber-50/40 transition-all flex flex-col justify-between space-y-1.5 group"
+                          >
+                            <div>
+                              <span className="text-[9px] font-extrabold text-amber-700 block uppercase">{ap.number}</span>
+                              <p className="text-xs font-bold text-slate-800 group-hover:text-amber-900 truncate">{ap.title}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{ap.authors}</p>
+                            </div>
+                            <span className="text-[10px] font-bold text-amber-600 inline-flex items-center gap-1">
+                              <span>Abrir PDF</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px] font-bold text-amber-700">
-                <span>Abrir PDF</span>
-                <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </a>
-          ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -741,7 +760,9 @@ export default function MateriasPage() {
         </div>
       }
     >
-      <MateriasContent />
+      <TabGuard tabId="materias">
+        <MateriasContent />
+      </TabGuard>
     </Suspense>
   )
 }

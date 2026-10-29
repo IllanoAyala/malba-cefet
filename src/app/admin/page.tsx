@@ -23,9 +23,13 @@ import {
   ShieldCheck,
   AlertTriangle,
   Cpu,
-  Zap
+  Zap,
+  BookOpen,
+  SlidersHorizontal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { QuestionReviewTab } from "@/components/admin/QuestionReviewTab"
+import { TabManagementTab } from "@/components/admin/TabManagementTab"
 
 interface MonitoredUser {
   id: string
@@ -60,6 +64,7 @@ export default function AdminDashboardPage() {
   const router = useRouter()
 
   const [isLoading, setIsLoading] = useState(true)
+  const [adminTab, setAdminTab] = useState<"monitoring" | "questions" | "tabs">("monitoring")
   const [summary, setSummary] = useState<any>(null)
   const [tokenMetrics, setTokenMetrics] = useState<any>(null)
   const [users, setUsers] = useState<MonitoredUser[]>([])
@@ -286,6 +291,60 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
+      {/* ================= SELETOR DE ABAS PRINCIPAIS DO PAINEL ADMIN ================= */}
+      <div className="flex border-b border-slate-200 gap-2 pt-1">
+        <button
+          type="button"
+          onClick={() => setAdminTab("monitoring")}
+          className={`pb-3 px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            adminTab === "monitoring"
+              ? "border-blue-600 text-blue-600 bg-blue-50/30 rounded-t-xl"
+              : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-xl"
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Monitoramento &amp; Telemetria</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminTab("questions")}
+          className={`pb-3 px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            adminTab === "questions"
+              ? "border-blue-600 text-blue-600 bg-blue-50/30 rounded-t-xl"
+              : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-xl"
+          }`}
+        >
+          <BookOpen className="w-4 h-4" />
+          <span>Banco de Questões &amp; Revisão</span>
+          <span className="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            90 Questões
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminTab("tabs")}
+          className={`pb-3 px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            adminTab === "tabs"
+              ? "border-blue-600 text-blue-600 bg-blue-50/30 rounded-t-xl"
+              : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-xl"
+          }`}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>Visibilidade das Abas</span>
+          <span className="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+            Menu Usuários
+          </span>
+        </button>
+      </div>
+
+      {adminTab === "questions" ? (
+        <QuestionReviewTab />
+      ) : adminTab === "tabs" ? (
+        <TabManagementTab />
+      ) : (
+        <>
       {/* ================= 2. KPIS DE MONITORAMENTO GLOBAL ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-1">
@@ -895,6 +954,8 @@ export default function AdminDashboardPage() {
           </table>
         </div>
       </div>
+      </>
+      )}
 
     </div>
   )

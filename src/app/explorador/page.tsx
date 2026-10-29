@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
 import { getModuleForTopic } from "@/data/studyMaterials"
 import {
@@ -19,6 +20,8 @@ import {
   PlayCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MathSnippet } from "@/components/ui/MathSnippet"
+import { TabGuard } from "@/components/layout/TabGuard"
 
 interface EnemQuestion {
   id: string | number
@@ -32,6 +35,8 @@ interface EnemQuestion {
 function ExploradorContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session } = useSession()
+  const matricula = (session?.user as any)?.matricula
   const initialTopicParam = searchParams.get("topic")
   const initialStatusParam = searchParams.get("status")
 
@@ -71,7 +76,12 @@ function ExploradorContent() {
           setEnemQuestions([])
         }
         if (tData && Array.isArray(tData.solvedQuestionIds)) {
-          syncQuestionProgress(tData.solvedQuestionIds, tData.reviewQuestionIds || [])
+          syncQuestionProgress(
+            tData.solvedQuestionIds,
+            tData.reviewQuestionIds || [],
+            matricula,
+            tData.streak
+          )
         }
         setIsLoading(false)
       })
@@ -80,7 +90,7 @@ function ExploradorContent() {
         setEnemQuestions([])
         setIsLoading(false)
       })
-  }, [])
+  }, [matricula])
 
   // Filtros Dinâmicos
   const years = ["Todos", "1º Ano", "2º Ano", "3º Ano"]
@@ -472,9 +482,10 @@ function ExploradorContent() {
                     </span>
 
                     {/* Enunciado Resumido */}
-                    <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed font-normal">
-                      {q.enunciado}
-                    </p>
+                    <MathSnippet
+                      content={q.enunciado}
+                      className="text-xs text-slate-600 line-clamp-3 leading-relaxed font-normal"
+                    />
                   </div>
 
                   {/* Rodapé de Ação + Atalho da Aula */}
@@ -544,9 +555,10 @@ function ExploradorContent() {
                     <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">
                       {q.topico_bncc}
                     </h4>
-                    <p className="text-xs text-slate-500 line-clamp-1 leading-relaxed">
-                      {q.enunciado}
-                    </p>
+                    <MathSnippet
+                      content={q.enunciado}
+                      className="text-xs text-slate-500 line-clamp-1 leading-relaxed"
+                    />
                   </div>
 
                   <Button
@@ -592,7 +604,9 @@ export default function ExploradorPage() {
         </div>
       }
     >
-      <ExploradorContent />
+      <TabGuard tabId="explorador">
+        <ExploradorContent />
+      </TabGuard>
     </Suspense>
   )
 }

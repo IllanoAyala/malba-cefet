@@ -8,9 +8,10 @@ export async function POST(req: Request) {
     const session = await auth();
     const matricula = (session?.user as any)?.matricula;
     const rawSessionId = data.sessionId || "anonymous_session";
-    const taggedSessionId = matricula && !rawSessionId.startsWith(`${matricula}::`)
-      ? `${matricula}::${rawSessionId}`
-      : rawSessionId;
+    const cleanSessionId = rawSessionId.includes('::') ? rawSessionId.split('::').pop() : rawSessionId;
+    const taggedSessionId = matricula
+      ? `${matricula}::${cleanSessionId}`
+      : cleanSessionId;
 
     const feedback = await prisma.studentFeedback.create({
       data: {

@@ -19,14 +19,81 @@ import {
   PlayCircle
 } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
+import { useAppStore } from "@/store/useAppStore"
 import { Logo } from "@/components/ui/Logo"
 import { AboutMalbaModal } from "@/components/features/AboutMalbaModal"
+import { DEFAULT_NAV_TABS, NavTabItem } from "@/data/navigationConfig"
 
-export function Sidebar() {
+const ICON_MAP: Record<string, React.ElementType> = {
+  Compass,
+  PlayCircle,
+  BookOpen,
+  BarChart2,
+  BookMarked,
+  GraduationCap,
+  ShieldCheck,
+  QrCode,
+}
+
+interface SidebarProps {
+  initialTabs?: NavTabItem[]
+}
+
+export function Sidebar({ initialTabs }: SidebarProps) {
   const pathname = usePathname()
   const { data: session, status } = useSession()
   const [isAboutOpen, setIsAboutOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  const storeNavTabs = useAppStore((state) => state.navigationTabs)
+  const setNavigationTabs = useAppStore((state) => state.setNavigationTabs)
+
+  // Prioriza initialTabs vindo diretamente do servidor na primeira renderização (evita flash)
+  const navigationTabs =
+    initialTabs && initialTabs.length > 0
+      ? initialTabs
+      : storeNavTabs && storeNavTabs.length > 0
+      ? storeNavTabs
+      : DEFAULT_NAV_TABS
+
+  // Sincroniza configurações de abas com o servidor e canais de atualização
+  React.useEffect(() => {
+    if (initialTabs && initialTabs.length > 0) {
+      setNavigationTabs(initialTabs)
+    }
+
+    fetch("/api/navigation-settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data.tabs) && data.tabs.length > 0) {
+          setNavigationTabs(data.tabs)
+        }
+      })
+      .catch((err) => console.error("Erro ao sincronizar abas da barra lateral:", err))
+
+    const handleNavigationUpdated = (e: any) => {
+      if (Array.isArray(e.detail)) {
+        setNavigationTabs(e.detail)
+      }
+    }
+    window.addEventListener("navigation-updated", handleNavigationUpdated)
+
+    // BroadcastChannel para sincronizar abas abertas simultaneamente
+    let bc: BroadcastChannel | null = null
+    try {
+      bc = new BroadcastChannel("malba-navigation-channel")
+      bc.onmessage = (event) => {
+        if (event.data?.tabs && Array.isArray(event.data.tabs)) {
+          setNavigationTabs(event.data.tabs)
+        }
+      }
+    } catch {}
+
+    return () => {
+      window.removeEventListener("navigation-updated", handleNavigationUpdated)
+      if (bc) bc.close()
+    }
+  }, [initialTabs, setNavigationTabs])
 
   if (status === "loading" || !session) return null
 
@@ -42,29 +109,42 @@ export function Sidebar() {
     }
     return fullName.substring(0, 2).toUpperCase()
   }
+
+  // Lista dinâmica de abas
+  const activeTabsList = navigationTabs && navigationTabs.length > 0 ? navigationTabs : DEFAULT_NAV_TABS
+
+  const dynamicNavItems = activeTabsList
+    .filter((tab) => {
+      // Se for admin, sempre exibe todas as abas
+      if (role === "admin") return true
+      // Para usuários normais (aluno/professor): deve estar ativada E o papel estar na lista de permissões
+      return tab.enabled && tab.allowedRoles.includes(role as "aluno" | "professor")
+    })
+    .map((tab) => ({
+      href: tab.href,
+      label: tab.label,
+      icon: ICON_MAP[tab.iconName] || Compass,
+      roles: ["admin", ...tab.allowedRoles],
+      enabled: tab.enabled,
+    }))
   
   const navGroups = [
-    {
-      label: "ADMINISTRAÇÃO",
-      roles: ['admin'],
-      items: [
-        { href: "/admin", label: "Painel Admin & Contas", icon: ShieldCheck, roles: ['admin'] },
-      ]
-    },
+    ...(role === "admin"
+      ? [
+          {
+            label: "ADMINISTRAÇÃO",
+            roles: ["admin"],
+            items: [
+              { href: "/admin", label: "Painel Admin & Contas", icon: ShieldCheck, roles: ["admin"], enabled: true },
+            ],
+          },
+        ]
+      : []),
     {
       label: "NAVEGAÇÃO",
-      roles: ['admin', 'professor', 'aluno'],
-      items: [
-        { href: "/", label: "Dashboard", icon: Compass, roles: ['admin', 'aluno', 'professor'] },
-        { href: "/materias", label: "Matérias & Videoaulas", icon: PlayCircle, roles: ['admin', 'aluno', 'professor'] },
-        { href: "/explorador", label: "Catálogo BNCC", icon: BookOpen, roles: ['admin', 'aluno', 'professor'] },
-        { href: "/aluno/desempenho", label: "Desempenho", icon: BarChart2, roles: ['admin', 'aluno'] },
-        { href: "/aluno/caderno", label: "Caderno de Revisão", icon: BookMarked, roles: ['admin', 'aluno'] },
-        { href: "/professor", label: "Roteiros de Aula", icon: GraduationCap, roles: ['admin', 'professor'] },
-        { href: "/professor/tutorial", label: "Tutorial Ético IA", icon: ShieldCheck, roles: ['admin', 'professor'] },
-        { href: "/qrcode", label: "Acesso Mobile (QR)", icon: QrCode, roles: ['admin', 'aluno', 'professor'] },
-      ]
-    }
+      roles: ["admin", "professor", "aluno"],
+      items: dynamicNavItems,
+    },
   ]
 
   // Filtra os grupos para mostrar apenas os que a role atual tem acesso
@@ -97,7 +177,12 @@ export function Sidebar() {
                     )}
                   >
                     <item.icon className={cn("w-4 h-4", isActive ? "text-blue-600" : "text-slate-400")} />
-                    {item.label}
+                    <span className="truncate">{item.label}</span>
+                    {role === "admin" && item.href !== "/admin" && !item.enabled && (
+                      <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                        Oculta
+                      </span>
+                    )}
                   </Link>
                 )
               })}
@@ -135,7 +220,13 @@ export function Sidebar() {
             </div>
           </div>
           <button 
-            onClick={() => signOut()}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.sessionStorage.removeItem("malba_session_id")
+              }
+              useAppStore.getState().resetUserProgress()
+              signOut({ callbackUrl: "/login" })
+            }}
             className="p-2 bg-transparent text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
             title="Sair da Plataforma"
           >
@@ -150,7 +241,7 @@ export function Sidebar() {
     <>
       {/* ================= 1. BARRA SUPERIOR MOBILE (EXCLUSIVA PARA SMARTPHONES) ================= */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 bg-[#F8FAFC] border-b border-slate-200/80 w-full shrink-0 z-30 shadow-xs">
-        <Logo size="sm" variant="light" subtitle="CEFET-MG" showBadge={false} />
+        <Logo size="sm" variant="light" showBadge={false} />
         
         <div className="flex items-center gap-2">
           <Link
@@ -184,7 +275,7 @@ export function Sidebar() {
           <aside className="relative w-72 max-w-[85vw] bg-[#F8FAFC] text-slate-800 flex flex-col h-full shadow-2xl z-50 border-r border-slate-200/80 animate-in slide-in-from-left duration-300 font-sans">
             {/* Header da Gaveta */}
             <div className="p-5 border-b border-slate-200/70 flex items-center justify-between">
-              <Logo size="sm" variant="light" subtitle="CEFET-MG • Divinópolis" showBadge={false} />
+              <Logo size="sm" variant="light" showBadge={false} />
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
@@ -204,7 +295,7 @@ export function Sidebar() {
       <aside className="hidden md:flex w-64 bg-[#F8FAFC] text-slate-800 flex-col h-full shrink-0 shadow-xs z-20 relative border-r border-slate-200/80 font-sans transition-colors duration-300">
         {/* Área da Logo Wordmark Integrada */}
         <div className="p-6 border-b border-slate-200/70">
-          <Logo size="sm" variant="light" subtitle="CEFET-MG • Campus V" showBadge={false} />
+          <Logo size="sm" variant="light" showBadge={false} />
         </div>
         
         {/* Navegação Desktop */}

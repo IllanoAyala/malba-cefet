@@ -2,10 +2,12 @@
 import { BookOpen, ShieldCheck, BarChart3, ChevronRight, CheckCircle2, ArrowRight } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { TabGuard } from "@/components/layout/TabGuard"
 
 export default function TutorialIAPage() {
   return (
-    <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-10 hide-scrollbar">
+    <TabGuard tabId="tutorial">
+      <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-10 hide-scrollbar">
       <div className="max-w-5xl mx-auto space-y-8">
         
       {/* HEADER PADRONIZADO */}
@@ -144,5 +146,6 @@ export default function TutorialIAPage() {
 
       </div>
     </div>
+    </TabGuard>
   )
 }

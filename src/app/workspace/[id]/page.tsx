@@ -396,7 +396,15 @@ export default function WorkspacePage() {
             rehypePlugins={[rehypeKatex]}
             components={{
               img: ({node, ...props}) => <img className="max-w-full rounded-xl my-6 shadow-sm border border-slate-200" {...props} />,
-              p: ({node, ...props}) => <p className="text-lg leading-relaxed text-slate-800 mb-4" {...props} />
+              p: ({node, ...props}) => <p className="text-lg leading-relaxed text-slate-800 mb-4" {...props} />,
+              table: ({node, ...props}) => (
+                <div className="overflow-x-auto my-6 not-prose">
+                  <table className="min-w-full border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-xs text-sm sm:text-base bg-white" {...props} />
+                </div>
+              ),
+              thead: ({node, ...props}) => <thead className="bg-slate-50 border-b border-slate-200 font-semibold text-slate-800" {...props} />,
+              th: ({node, ...props}) => <th className="px-4 py-2.5 text-center font-bold text-slate-700 border-r border-slate-200 last:border-r-0" {...props} />,
+              td: ({node, ...props}) => <td className="px-4 py-2 text-center text-slate-700 border-b border-r border-slate-100 last:border-r-0" {...props} />
             }}
           >
             {question.enunciado}

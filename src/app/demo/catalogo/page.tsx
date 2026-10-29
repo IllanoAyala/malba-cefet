@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { MathSnippet } from "@/components/ui/MathSnippet"
 
 export default function DemoCatalogoPage() {
   const router = useRouter()
@@ -295,9 +296,10 @@ export default function DemoCatalogoPage() {
                           {q.habilidade_enem.split("-")[0].trim()}
                         </span>
 
-                        <p className="text-xs text-slate-600 line-clamp-3 leading-relaxed">
-                          {q.enunciado}
-                        </p>
+                        <MathSnippet
+                          content={q.enunciado}
+                          className="text-xs text-slate-600 line-clamp-3 leading-relaxed"
+                        />
                       </div>
 
                       <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-blue-600 font-bold">
@@ -333,9 +335,10 @@ export default function DemoCatalogoPage() {
                         <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">
                           {q.topico_bncc}
                         </h4>
-                        <p className="text-xs text-slate-500 line-clamp-1">
-                          {q.enunciado}
-                        </p>
+                        <MathSnippet
+                          content={q.enunciado}
+                          className="text-xs text-slate-500 line-clamp-1"
+                        />
                       </div>
 
                       <Button variant="outline" className="text-xs font-bold h-9 px-4 rounded-xl border-slate-200 shrink-0 group-hover:border-blue-400 group-hover:text-blue-700">
@@ -453,9 +456,10 @@ export default function DemoCatalogoPage() {
                       <h4 className="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">
                         {q.topico_bncc}
                       </h4>
-                      <p className="text-xs text-slate-500 line-clamp-2">
-                        {q.enunciado}
-                      </p>
+                      <MathSnippet
+                        content={q.enunciado}
+                        className="text-xs text-slate-500 line-clamp-2"
+                      />
                     </div>
 
                     <Button variant="outline" className="text-xs font-semibold h-9 rounded-xl border-slate-200 shrink-0">
@@ -529,9 +533,10 @@ export default function DemoCatalogoPage() {
                         <h4 className="font-bold text-slate-800 text-sm group-hover:text-blue-700 transition-colors line-clamp-1">
                           {q.topico_bncc}
                         </h4>
-                        <p className="text-xs text-slate-500 line-clamp-2">
-                          {q.enunciado}
-                        </p>
+                        <MathSnippet
+                          content={q.enunciado}
+                          className="text-xs text-slate-500 line-clamp-2"
+                        />
                       </div>
                     ))}
                   </div>

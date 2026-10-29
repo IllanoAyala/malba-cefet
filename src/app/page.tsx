@@ -16,9 +16,13 @@ import {
   Flame,
   Sparkles,
   RotateCcw,
+  Landmark,
+  Cpu,
+  BookOpen,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AIAssistantProgress } from "@/components/ui/AIAssistantProgress"
+import { MathSnippet } from "@/components/ui/MathSnippet"
 
 // Etapas pedagógicas do Arco de Maguerez para a timeline interativa
 const ARCO_STEPS = [
@@ -56,8 +60,15 @@ const ARCO_STEPS = [
 
 export default function DashboardPage() {
   const { data: session } = useSession()
+  const matricula = (session?.user as any)?.matricula
   const router = useRouter()
-  const { solvedQuestionIds, reviewQuestionIds, syncQuestionProgress } = useAppStore()
+  const {
+    solvedQuestionIds,
+    reviewQuestionIds,
+    syncQuestionProgress,
+    streakDays,
+    hasPracticedToday,
+  } = useAppStore()
 
   const [enemQuestions, setEnemQuestions] = useState<any[]>([])
   const [selectedYearTab, setSelectedYearTab] = useState<"1º Ano" | "2º Ano" | "3º Ano">("1º Ano")
@@ -76,11 +87,16 @@ export default function DashboardPage() {
           setEnemQuestions(data)
         }
         if (tData && Array.isArray(tData.solvedQuestionIds)) {
-          syncQuestionProgress(tData.solvedQuestionIds, tData.reviewQuestionIds || [])
+          syncQuestionProgress(
+            tData.solvedQuestionIds,
+            tData.reviewQuestionIds || [],
+            matricula,
+            tData.streak
+          )
         }
       })
       .catch((err) => console.error("Erro ao carregar dados do dashboard:", err))
-  }, [])
+  }, [matricula])
 
   // Métricas agregadas
   function getQuestionsByYear(ano: string) {
@@ -92,6 +108,7 @@ export default function DashboardPage() {
   const ano3 = getQuestionsByYear("3º Ano")
   const totalQuestions = enemQuestions.length || 90
   const totalSolved = enemQuestions.filter((q) => solvedQuestionIds.includes(String(q.id))).length
+  const masteryPercent = totalQuestions > 0 ? Math.round((totalSolved / totalQuestions) * 100) : 0
 
   const uniqueTopics = new Set(enemQuestions.map((q) => q.topico_bncc)).size || 29
 
@@ -190,44 +207,111 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans">
-      {/* ================= 1. CABEÇALHO COMPACTO COM KPIS EM LINHA ================= */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">
-              PIBIC CEFET-MG &bull; BCE 2026
+      {/* ================= 1. CABEÇALHO BOAS-VINDAS & MÉTRICAS PRINCIPAIS ================= */}
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs relative overflow-hidden flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+        {/* Lado Esquerdo: Identidade + Boas-vindas */}
+        <div className="space-y-2 max-w-2xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/70">
+              <Landmark className="w-3 h-3 text-blue-600" />
+              <span>PIBIC CEFET-MG &bull; Campus V</span>
             </span>
-            <span className="text-slate-300">&bull;</span>
-            <span className="text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Tutor Socrático Ativo
+
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Tutor Socrático Ativo</span>
+            </span>
+
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/70">
+              <Cpu className="w-3 h-3 text-slate-400" />
+              <span>GPT-OSS 120B</span>
             </span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Olá, {session?.user?.name?.split(" ")[0] || "Estudante"}! 👋
-          </h1>
-          <p className="text-xs text-slate-500">
-            Trilha de Matemática do Ensino Médio guiada pelo Arco de Maguerez, GTMAT CEFET-MG, Apostilas OBMEP e questões contextualizadas
-          </p>
+
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>Olá, {session?.user?.name?.split(" ")[0] || "Estudante"}!</span>
+              <span className="inline-block origin-[70%_70%]">👋</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-light mt-0.5">
+              Desenvolva sua autonomia matemática com mediação socrática guiada pelo Arco de Maguerez, videoaulas do GTMAT e questões do ENEM.
+            </p>
+          </div>
         </div>
 
-        {/* 4 KPIs em Linha */}
-        <div className="flex flex-wrap items-center gap-5 text-xs">
-          <div>
-            <span className="block text-slate-400 font-medium text-[11px]">Seu Domínio</span>
-            <span className="text-base font-extrabold text-emerald-600">
-              {totalSolved} / {totalQuestions}
-            </span>
+        {/* Lado Direito: 3 Cards de Métricas em Grid Fixo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full xl:w-auto shrink-0">
+          {/* Métrica 1: Domínio Geral */}
+          <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex items-center gap-3 transition-all min-w-[145px]">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 shrink-0">
+              <Target className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Seu Domínio
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-extrabold text-slate-900">{totalSolved}</span>
+                <span className="text-xs font-semibold text-slate-400">/ {totalQuestions}</span>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-600 block truncate">
+                {masteryPercent}% dominado
+              </span>
+            </div>
           </div>
-          <div className="h-8 w-px bg-slate-200"></div>
-          <div>
-            <span className="block text-slate-400 font-medium text-[11px]">Matriz BNCC</span>
-            <span className="text-base font-extrabold text-slate-900">{uniqueTopics} Tópicos</span>
+
+          {/* Métrica 2: Ofensiva Diária */}
+          <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex items-center gap-3 transition-all min-w-[145px]">
+            <div
+              className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${
+                hasPracticedToday
+                  ? "bg-amber-100 border-amber-300 text-amber-600"
+                  : "bg-amber-50/70 border-amber-200/70 text-amber-500"
+              }`}
+            >
+              <Flame
+                className={`w-5 h-5 ${
+                  hasPracticedToday ? "fill-amber-500 text-amber-500 animate-pulse" : "text-amber-500/80"
+                }`}
+              />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Ofensiva Diária
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-extrabold text-slate-900">{streakDays}</span>
+                <span className="text-xs font-semibold text-slate-400">
+                  {streakDays === 1 ? "dia" : "dias"}
+                </span>
+              </div>
+              <span
+                className={`text-[10px] font-bold block truncate ${
+                  hasPracticedToday ? "text-amber-600" : "text-slate-400"
+                }`}
+              >
+                {hasPracticedToday ? "Mantida hoje! 🔥" : "Pratique hoje"}
+              </span>
+            </div>
           </div>
-          <div className="h-8 w-px bg-slate-200"></div>
-          <div>
-            <span className="block text-slate-400 font-medium text-[11px]">Motor Socrático</span>
-            <span className="text-base font-extrabold text-blue-600">GPT-OSS 120B</span>
+
+          {/* Métrica 3: Matriz BNCC */}
+          <div className="bg-slate-50/80 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 flex items-center gap-3 transition-all min-w-[145px]">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shrink-0">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Matriz BNCC
+              </span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-extrabold text-slate-900">{uniqueTopics}</span>
+                <span className="text-xs font-semibold text-slate-400">Tópicos</span>
+              </div>
+              <span className="text-[10px] font-semibold text-blue-600 block truncate">
+                1ª a 3ª Série EM
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -240,10 +324,31 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-xs">
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="inline-flex items-center gap-1 bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-                    <Flame className="w-3 h-3 text-amber-300" />
                     <span>Missão do Dia &bull; {missionCompletedCount}/3 Concluídas</span>
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full transition-all ${
+                      hasPracticedToday
+                        ? "bg-amber-400/30 text-amber-200 border border-amber-300/40"
+                        : "bg-white/15 text-white/90"
+                    }`}
+                  >
+                    <Flame
+                      className={`w-3.5 h-3.5 ${
+                        hasPracticedToday
+                          ? "fill-amber-300 text-amber-300 animate-pulse"
+                          : "text-amber-200"
+                      }`}
+                    />
+                    <span>
+                      {streakDays > 0
+                        ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva${
+                            hasPracticedToday ? " • Mantida hoje! 🔥" : " • Pratique para manter"
+                          }`
+                        : "Comece sua Ofensiva Hoje! 🔥"}
+                    </span>
                   </span>
                 </div>
                 <h2 className="text-lg font-bold">Desafio Guiado de 3 Questões (~15 min)</h2>
@@ -313,9 +418,10 @@ export default function DashboardPage() {
                         <h4 className="font-bold text-xs text-slate-900 group-hover:text-blue-700 transition-colors line-clamp-1">
                           {q.topico_bncc}
                         </h4>
-                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-snug">
-                          {q.enunciado}
-                        </p>
+                        <MathSnippet
+                          content={q.enunciado}
+                          className="text-[11px] text-slate-500 line-clamp-2 leading-snug"
+                        />
                       </div>
 
                       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">

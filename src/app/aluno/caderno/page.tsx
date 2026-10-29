@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
 import {
   STUDY_MODULES,
@@ -23,9 +24,13 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { MathSnippet } from "@/components/ui/MathSnippet"
+import { TabGuard } from "@/components/layout/TabGuard"
 
 export default function CadernoPage() {
   const router = useRouter()
+  const { data: session } = useSession()
+  const matricula = (session?.user as any)?.matricula
   const { solvedQuestionIds, reviewQuestionIds, syncQuestionProgress } = useAppStore()
   const [questions, setQuestions] = useState<any[]>([])
 
@@ -40,17 +45,23 @@ export default function CadernoPage() {
       .then(([qData, tData]) => {
         if (Array.isArray(qData)) setQuestions(qData)
         if (tData && Array.isArray(tData.solvedQuestionIds)) {
-          syncQuestionProgress(tData.solvedQuestionIds, tData.reviewQuestionIds || [])
+          syncQuestionProgress(
+            tData.solvedQuestionIds,
+            tData.reviewQuestionIds || [],
+            matricula,
+            tData.streak
+          )
         }
       })
       .catch((e) => console.error(e))
-  }, [])
+  }, [matricula])
 
   const reviewQuestions = questions.filter((q) => reviewQuestionIds.includes(String(q.id)))
   const solvedQuestions = questions.filter((q) => solvedQuestionIds.includes(String(q.id)))
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
+    <TabGuard tabId="caderno">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
       {/* Cabeçalho */}
       <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start gap-4">
@@ -128,7 +139,10 @@ export default function CadernoPage() {
                       </Badge>
                       <span className="text-xs font-semibold text-slate-400">Questão #{q.id}</span>
                     </div>
-                    <p className="text-xs text-slate-600 line-clamp-3">{q.enunciado}</p>
+                    <MathSnippet
+                      content={q.enunciado}
+                      className="text-xs text-slate-600 line-clamp-3"
+                    />
                   </div>
 
                   <div className="space-y-2 pt-2 border-t border-slate-100">
@@ -282,5 +296,6 @@ export default function CadernoPage() {
         </div>
       </section>
     </div>
+    </TabGuard>
   )
 }

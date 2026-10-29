@@ -12,15 +12,20 @@ export async function GET(req: Request) {
     const clientSessionId = searchParams.get('sessionId');
 
     if (!matricula && !clientSessionId) {
-      return NextResponse.json({ solvedQuestionIds: [], reviewQuestionIds: [] });
+      return NextResponse.json({
+        solvedQuestionIds: [],
+        reviewQuestionIds: [],
+        streak: { currentStreak: 0, hasPracticedToday: false, totalDays: 0 },
+      });
     }
 
     const whereConditions: any[] = [];
     if (matricula) {
+      // Quando logado, buscar ESTRITAMENTE os logs deste aluno específico (nunca misturar com outros)
       whereConditions.push({ sessionId: matricula });
       whereConditions.push({ sessionId: { startsWith: `${matricula}::` } });
-    }
-    if (clientSessionId) {
+    } else if (clientSessionId) {
+      // Visitante anônimo (sem matrícula logada)
       whereConditions.push({ sessionId: clientSessionId });
       whereConditions.push({ sessionId: { endsWith: `::${clientSessionId}` } });
     }
@@ -47,13 +52,56 @@ export async function GET(req: Request) {
       }
     }
 
+    // Cálculo da Ofensiva (Streak de dias consecutivos com prática no fuso horário do Brasil)
+    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    const distinctDatesSet = new Set<string>();
+    for (const log of logs) {
+      if (log.createdAt) {
+        distinctDatesSet.add(dateFormatter.format(new Date(log.createdAt)));
+      }
+    }
+
+    const todayStr = dateFormatter.format(new Date());
+
+    const getPrevDay = (dStr: string) => {
+      const d = new Date(dStr + "T12:00:00Z");
+      d.setUTCDate(d.getUTCDate() - 1);
+      return d.toISOString().slice(0, 10);
+    };
+
+    const hasPracticedToday = distinctDatesSet.has(todayStr);
+    const yesterdayStr = getPrevDay(todayStr);
+
+    let currentStreak = 0;
+    let checkDate = hasPracticedToday ? todayStr : yesterdayStr;
+
+    while (distinctDatesSet.has(checkDate)) {
+      currentStreak++;
+      checkDate = getPrevDay(checkDate);
+    }
+
     return NextResponse.json({
       solvedQuestionIds: Array.from(solvedSet),
       reviewQuestionIds: Array.from(reviewSet),
+      streak: {
+        currentStreak,
+        hasPracticedToday,
+        totalDays: distinctDatesSet.size,
+      },
     });
   } catch (error: any) {
     console.error("Telemetry GET Error:", error);
-    return NextResponse.json({ solvedQuestionIds: [], reviewQuestionIds: [] });
+    return NextResponse.json({
+      solvedQuestionIds: [],
+      reviewQuestionIds: [],
+      streak: { currentStreak: 0, hasPracticedToday: false, totalDays: 0 },
+    });
   }
 }
 
@@ -63,9 +111,10 @@ export async function POST(req: Request) {
     const session = await auth();
     const matricula = (session?.user as any)?.matricula;
     const rawSessionId = data.sessionId || "anonymous_session";
-    const taggedSessionId = matricula && !rawSessionId.startsWith(`${matricula}::`)
-      ? `${matricula}::${rawSessionId}`
-      : rawSessionId;
+    const cleanSessionId = rawSessionId.includes('::') ? rawSessionId.split('::').pop() : rawSessionId;
+    const taggedSessionId = matricula
+      ? `${matricula}::${cleanSessionId}`
+      : cleanSessionId;
 
     const log = await prisma.interactionLog.create({
       data: {

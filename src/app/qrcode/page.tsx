@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/ui/Logo"
+import { TabGuard } from "@/components/layout/TabGuard"
 
 export default function QrCodePage() {
   const [currentUrl, setCurrentUrl] = useState(
@@ -81,7 +82,8 @@ export default function QrCodePage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6 font-sans">
+    <TabGuard tabId="qrcode">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6 font-sans">
       
       {/* ================= CABEÇALHO DA PÁGINA ================= */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -129,7 +131,7 @@ export default function QrCodePage() {
             
             {/* Logo do Malba no topo do card */}
             <div className="mb-3">
-              <Logo size="md" subtitle="CEFET-MG • Campus V Divinópolis" showBadge={false} />
+              <Logo size="md" showBadge={false} />
             </div>
 
             {/* Selo de Segurança HTTPS */}
@@ -315,5 +317,6 @@ export default function QrCodePage() {
       </div>
 
     </div>
+    </TabGuard>
   )
 }

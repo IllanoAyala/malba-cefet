@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { TabGuard } from "@/components/layout/TabGuard"
 import {
   STUDY_MODULES,
   OBMEP_APOSTILAS,
@@ -187,7 +188,8 @@ export default function ProfessorPage() {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto w-full space-y-12 print:p-0 print:space-y-6">
+    <TabGuard tabId="professor">
+      <div className="p-8 max-w-6xl mx-auto w-full space-y-12 print:p-0 print:space-y-6">
       {/* HEADER PADRONIZADO */}
       <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-8 lg:p-10 text-white relative overflow-hidden shadow-xl border border-slate-800 mb-8 print:hidden">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -799,5 +801,6 @@ export default function ProfessorPage() {
         </div>
       )}
     </div>
+    </TabGuard>
   )
 }

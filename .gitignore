@@ -35,5 +35,6 @@ next-env.d.ts
 
 # One-off local scratch scripts
 fix_*.js
+scratch_*.json
 test-math.mjs
 test-react-markdown.jsx

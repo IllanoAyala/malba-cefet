@@ -20,6 +20,7 @@ import {
   Bot
 } from "lucide-react"
 import { Logo } from "@/components/ui/Logo"
+import { useAppStore } from "@/store/useAppStore"
 import { Button } from "@/components/ui/button"
 
 export default function DemoLoginPage() {
@@ -57,6 +58,10 @@ export default function DemoLoginPage() {
       setError("Credenciais inválidas. Use aluno/cefet123 ou professor/cefet123")
       setIsLoading(false)
     } else {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.removeItem("malba_session_id")
+      }
+      useAppStore.getState().setActiveUser(matricula)
       router.push("/")
       router.refresh()
     }
