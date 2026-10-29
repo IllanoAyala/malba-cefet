@@ -103,8 +103,9 @@ async function importExamYear(year) {
 
     let enunciadoText = row.question ? row.question.trim() : '';
 
-    // Se houver figuras, baixar e anexar
+    // Se houver figuras, baixar e substituir no lugar exato do [[placeholder]]
     if (row.figures && Array.isArray(row.figures) && row.figures.length > 0) {
+      const imgTags = [];
       for (let fIdx = 0; fIdx < row.figures.length; fIdx++) {
         const figUrl = row.figures[fIdx];
         const fileName = `question-${questionNumber}${fIdx > 0 ? `_${fIdx}` : ''}.png`;
@@ -112,10 +113,28 @@ async function importExamYear(year) {
 
         const success = await downloadImage(figUrl, localFilePath);
         if (success) {
-          enunciadoText += `\n\n![Imagem da Questão ${questionNumber}](/images/${year}/${fileName})\n\n`;
+          imgTags.push(`![Imagem da Questão ${questionNumber}](/images/${year}/${fileName})`);
+        }
+      }
+
+      if (imgTags.length > 0) {
+        let tagIndex = 0;
+        if (enunciadoText.includes('[[placeholder]]')) {
+          enunciadoText = enunciadoText.replace(/\[\[placeholder\]\]/gi, () => {
+            if (tagIndex < imgTags.length) {
+              return '\n\n' + imgTags[tagIndex++] + '\n\n';
+            }
+            return '';
+          });
+        }
+        while (tagIndex < imgTags.length) {
+          enunciadoText += `\n\n${imgTags[tagIndex++]}\n\n`;
         }
       }
     }
+
+    // Remove qualquer placeholder residual
+    enunciadoText = enunciadoText.replace(/\[\[placeholder\]\]/gi, '').replace(/\n{3,}/g, '\n\n').trim();
 
     // Se a questão foi anulada oficialmente
     let correta = (row.label || 'A').toUpperCase().trim();
