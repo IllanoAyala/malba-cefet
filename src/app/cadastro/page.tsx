@@ -22,7 +22,9 @@ import {
   CheckCircle2,
   RotateCcw,
   ShieldCheck,
-  ChevronDown
+  ChevronDown,
+  Eye,
+  EyeOff
 } from "lucide-react"
 import { SERIES, CURSOS_CEFET } from "@/lib/curriculum"
 
@@ -53,6 +55,7 @@ export default function CadastroPage() {
   const [code, setCode] = useState("")
   const [matricula, setMatricula] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSendingCode, setIsSendingCode] = useState(false)
@@ -506,13 +509,23 @@ export default function CadastroPage() {
                   <div className="relative">
                     <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <Input
-                      type="password"
+                      type={showPassword ? "text" : "password"}
                       placeholder="Mínimo 4 caracteres"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                      className="pl-9 pr-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
                       required
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                      tabIndex={-1}
+                      title={showPassword ? "Ocultar senha" : "Ver senha"}
+                      aria-label={showPassword ? "Ocultar senha" : "Ver senha"}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
                   </div>
                 </div>
 

@@ -17,6 +17,8 @@ import {
   Lightbulb,
   Check,
   Mail,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -65,6 +67,7 @@ export function EditUserModal({
   const [isCefet, setIsCefet] = useState<boolean>(user?.isCefet !== false)
   const [curso, setCurso] = useState<string>(user?.curso || "Informática")
   const [newPassword, setNewPassword] = useState("")
+  const [showNewPassword, setShowNewPassword] = useState(false)
   const [selectedClasses, setSelectedClasses] = useState<Array<{ serie: string; curso: string }>>(
     user?.teacherClasses || []
   )
@@ -534,13 +537,25 @@ export function EditUserModal({
               </div>
               <span className="text-[10px] text-slate-400">Opcional</span>
             </div>
-            <Input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Digite uma nova senha para alterar (mínimo 4 caracteres)..."
-              className="h-9 text-xs rounded-xl bg-white"
-            />
+            <div className="relative">
+              <Input
+                type={showNewPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Digite uma nova senha para alterar (mínimo 4 caracteres)..."
+                className="h-9 pr-9 text-xs rounded-xl bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                tabIndex={-1}
+                title={showNewPassword ? "Ocultar senha" : "Ver senha"}
+                aria-label={showNewPassword ? "Ocultar senha" : "Ver senha"}
+              >
+                {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
             <p className="text-[10px] text-slate-400">
               Deixe em branco para preservar a senha atual cadastrada.
             </p>
