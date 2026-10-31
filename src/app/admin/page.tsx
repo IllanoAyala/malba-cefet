@@ -453,7 +453,7 @@ export default function AdminDashboardPage() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
               <Zap className="w-3.5 h-3.5 text-blue-600" />
-              <span>Modelo Ativo: {tokenMetrics?.activeModel || "openai/gpt-oss-120b"}</span>
+              <span>Modelo Ativo: {tokenMetrics?.activeModel || "gemini-3.5-flash-lite"}</span>
             </span>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-semibold">
               <Clock className="w-3 h-3" />

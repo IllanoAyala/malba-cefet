@@ -190,9 +190,9 @@ export default function DashboardPage() {
               <span>Tutor Socrático Ativo</span>
             </span>
 
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium text-slate-500 bg-slate-100 border border-slate-200/70">
-              <Cpu className="w-3 h-3 text-slate-400" />
-              <span>GPT-OSS 120B</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-medium text-blue-700 bg-blue-50 border border-blue-200/70">
+              <Sparkles className="w-3 h-3 text-blue-600" />
+              <span>Gemini 3.5 Flash</span>
             </span>
           </div>
 
