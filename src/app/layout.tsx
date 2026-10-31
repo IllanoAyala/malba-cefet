@@ -53,13 +53,13 @@ export default async function RootLayout({
 
   return (
     <html lang="pt-BR" className={`${jakarta.variable} ${lora.variable} ${outfit.variable} ${inter.variable}`}>
-      <body className="font-sans bg-slate-50 text-slate-900 overflow-hidden">
+      <body className="font-sans bg-slate-50 text-slate-900 overflow-x-hidden md:overflow-hidden">
         <SessionProvider>
           <SessionSync />
           <ActivityTracker />
-          <div className="flex flex-col md:flex-row h-screen w-full overflow-hidden">
+          <div className="flex flex-col md:flex-row min-h-screen md:h-screen w-full overflow-x-hidden md:overflow-hidden">
             <Sidebar initialTabs={initialNavTabs} />
-            <main className="flex-1 flex flex-col h-full overflow-y-auto">
+            <main className="flex-1 flex flex-col h-full overflow-y-auto overscroll-y-contain">
               {children}
             </main>
           </div>

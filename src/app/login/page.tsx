@@ -91,7 +91,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
+    <div className="relative min-h-screen overflow-x-hidden lg:overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
 
       {/* ================= CAMADA DECORATIVA: ESFERAS DE FUNDO ================= */}
       {/* Posicionadas nas margens e espaços vazios para não cobrir textos. As desfocadas dão profundidade. */}

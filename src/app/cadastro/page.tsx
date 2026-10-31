@@ -268,7 +268,7 @@ export default function CadastroPage() {
 
   if (successPending) {
     return (
-      <div className="relative min-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
+      <div className="relative min-h-screen overflow-x-hidden lg:overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
         <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden="true">
           {BACKGROUND_SPHERES.map((s, i) => (
             <div
@@ -308,7 +308,7 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
+    <div className="relative min-h-screen overflow-x-hidden lg:overflow-hidden bg-[#F8FAFC] flex flex-col justify-between p-4 sm:p-8 lg:p-12 font-sans selection:bg-blue-200">
       
       {/* ================= CAMADA DECORATIVA: ESFERAS DE FUNDO ================= */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden="true">
