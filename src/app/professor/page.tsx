@@ -24,6 +24,11 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { TabGuard } from "@/components/layout/TabGuard"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
+import rehypeKatex from "rehype-katex"
+import "katex/dist/katex.min.css"
 import {
   STUDY_MODULES,
   OBMEP_APOSTILAS,
@@ -32,6 +37,16 @@ import {
   getModuleForTopic,
   StudyModule,
 } from "@/data/studyMaterials"
+
+function normalizeMathContent(text?: string | null): string {
+  if (!text) return ""
+  return text
+    .replace(/\\hexagon\b/g, "\\text{⬡}")
+    .replace(/\\varhexagon\b/g, "\\text{⬢}")
+    .replace(/\\pentagon\b/g, "\\text{⬠}")
+    .replace(/\\\((.*?)\\\)/g, '$$$1$$')
+    .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
+}
 
 export default function ProfessorPage() {
   const role = useAppStore(state => state.role)
@@ -430,7 +445,15 @@ export default function ProfessorPage() {
                 <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block mb-1">
                   Sugestão Metodológica para o Professor
                 </span>
-                <p className="text-sm text-slate-700 leading-relaxed">{lessonPlan.teacherGuide}</p>
+                <div className="text-sm text-slate-700 leading-relaxed">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                    components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                  >
+                    {normalizeMathContent(lessonPlan.teacherGuide)}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
 
@@ -629,7 +652,15 @@ export default function ProfessorPage() {
                 </div>
 
                 <h3 className="text-base font-bold text-slate-900">{mod.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{mod.teacherGuide}</p>
+                <div className="text-xs text-slate-600 leading-relaxed">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                    components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                  >
+                    {normalizeMathContent(mod.teacherGuide)}
+                  </ReactMarkdown>
+                </div>
 
                 <div className="pt-1 space-y-1.5 text-xs">
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70 flex items-center justify-between gap-2">

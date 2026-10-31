@@ -43,6 +43,16 @@ import remarkMath from "remark-math"
 import rehypeKatex from "rehype-katex"
 import "katex/dist/katex.min.css"
 
+function normalizeMathContent(text?: string | null): string {
+  if (!text) return ""
+  return text
+    .replace(/\\hexagon\b/g, "\\text{⬡}")
+    .replace(/\\varhexagon\b/g, "\\text{⬢}")
+    .replace(/\\pentagon\b/g, "\\text{⬠}")
+    .replace(/\\\((.*?)\\\)/g, '$$$1$$')
+    .replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$')
+}
+
 function MateriasContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -427,9 +437,15 @@ function MateriasContent() {
                 </div>
               </div>
 
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                {activeModule.summary}
-              </p>
+              <div className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                  components={{ p: ({ node, ...props }) => <p className="mb-1 last:mb-0 leading-relaxed" {...props} /> }}
+                >
+                  {normalizeMathContent(activeModule.summary)}
+                </ReactMarkdown>
+              </div>
 
               {/* ================= ABAS DO ESTÚDIO: QUESTÕES, FÓRMULAS & MATERIAIS ================= */}
               <div className="pt-2 border-t border-slate-100 space-y-4">
@@ -630,9 +646,15 @@ function MateriasContent() {
                           <span className="font-bold uppercase tracking-wider text-[10px] text-blue-700 block">
                             Sugestão Metodológica para Professores
                           </span>
-                          <p className="text-[11px] text-slate-600 leading-relaxed">
-                            {activeModule.teacherGuide}
-                          </p>
+                          <div className="text-[11px] text-slate-600 leading-relaxed">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                              components={{ p: ({ node, ...props }) => <span {...props} /> }}
+                            >
+                              {normalizeMathContent(activeModule.teacherGuide)}
+                            </ReactMarkdown>
+                          </div>
                         </div>
                       </div>
                     </div>
