@@ -7,6 +7,10 @@
   --foreground: #0f172a; /* text-slate-900 */
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
@@ -34,6 +38,21 @@ body {
 
 .animate-fade-in-up {
   animation: fade-in-up 0.5s ease-out forwards;
+}
+
+@keyframes tab-fade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-fade {
+  animation: tab-fade 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes float-slow {

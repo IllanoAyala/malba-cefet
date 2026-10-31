@@ -16,7 +16,8 @@ import {
   Menu,
   X,
   QrCode,
-  PlayCircle
+  PlayCircle,
+  Users
 } from "lucide-react"
 import { useSession, signOut } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
@@ -33,6 +34,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   GraduationCap,
   ShieldCheck,
   QrCode,
+  Users,
 }
 
 interface SidebarProps {
@@ -95,7 +97,13 @@ export function Sidebar({ initialTabs }: SidebarProps) {
     }
   }, [initialTabs, setNavigationTabs])
 
-  if (status === "loading" || !session) return null
+  // Ocultar a barra lateral em páginas de tela cheia ou de onboarding/perfil
+  const isCleanPage = 
+    pathname === "/perfil/completar" || 
+    pathname === "/login" || 
+    pathname === "/cadastro"
+
+  if (status === "loading" || !session || isCleanPage) return null
 
   const role = (session.user as any)?.role || 'aluno'
   const name = session.user?.name || 'Usuário'
@@ -150,6 +158,15 @@ export function Sidebar({ initialTabs }: SidebarProps) {
   // Filtra os grupos para mostrar apenas os que a role atual tem acesso
   const visibleGroups = navGroups.filter(group => group.roles.includes(role))
 
+  // Identifica exatamente qual item do menu deve estar ativo (evita ativação múltipla de rotas com prefixo comum como /professor e /professor/turmas)
+  const allVisibleItems = visibleGroups.flatMap(group => group.items.filter(item => item.roles.includes(role)))
+  const exactMatch = allVisibleItems.find(item => item.href === pathname)
+  const activeHref = exactMatch 
+    ? exactMatch.href 
+    : allVisibleItems
+        .filter(item => item.href !== "/" && (pathname.startsWith(`${item.href}/`) || pathname === item.href))
+        .sort((a, b) => b.href.length - a.href.length)[0]?.href
+
   // Conteúdo compartilhado da navegação (usado tanto no desktop quanto no drawer mobile)
   const renderNavContent = (isMobile = false) => (
     <>
@@ -161,7 +178,7 @@ export function Sidebar({ initialTabs }: SidebarProps) {
             </h3>
             <div className="space-y-1">
               {group.items.filter(item => item.roles.includes(role)).map((item) => {
-                const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
+                const isActive = item.href === activeHref
                 return (
                   <Link
                     key={item.href}

@@ -12,6 +12,7 @@ import {
   OBMEP_PORTAL_URL,
   getModuleForTopic,
 } from "@/data/studyMaterials"
+import { getAllowedSeries } from "@/lib/curriculum"
 import {
   PlayCircle,
   BookOpen,
@@ -104,12 +105,19 @@ function MateriasContent() {
     }
   }, [topicParam, moduleParam])
 
-  const filteredModules = STUDY_MODULES.filter(
+  const userRole = (session?.user as any)?.role
+  const userSerie = (session?.user as any)?.serie
+  const allowedYears = getAllowedSeries(userRole, userSerie)
+
+  // Conteúdo filtrado por série: séries superiores ficam ocultas para o aluno
+  const accessibleModules = STUDY_MODULES.filter((m) => allowedYears.includes(m.year))
+
+  const filteredModules = accessibleModules.filter(
     (m) => selectedYear === "Todos" || m.year === selectedYear
   )
 
   const activeModule: StudyModule =
-    STUDY_MODULES.find((m) => m.id === activeModuleId) || filteredModules[0] || STUDY_MODULES[0]
+    accessibleModules.find((m) => m.id === activeModuleId) || filteredModules[0] || accessibleModules[0] || STUDY_MODULES[0]
 
   const currentVideoId =
     mediaSource === "gtmat" ? activeModule.videoId : activeModule.secondaryVideoId
@@ -206,10 +214,10 @@ function MateriasContent() {
           <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end gap-2.5 shrink-0">
             {/* Seletor de Série (Segmented Tabs Moderno) */}
             <div className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 text-xs font-bold shadow-2xs">
-              {(["Todos", "1º Ano", "2º Ano", "3º Ano"] as const).map((yr) => (
+              {(allowedYears.length > 1 ? (["Todos", ...allowedYears] as const) : allowedYears).map((yr) => (
                 <button
                   key={yr}
-                  onClick={() => setSelectedYear(yr)}
+                  onClick={() => setSelectedYear(yr as any)}
                   className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
                     selectedYear === yr
                       ? "bg-white text-blue-700 shadow-xs font-extrabold"

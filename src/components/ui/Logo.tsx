@@ -16,7 +16,7 @@ export function Logo({
   className, 
   size = 'md', 
   showText = true,
-  showBadge = true,
+  showBadge = false,
   badgeText = "TUTOR",
   subtitle,
   variant = 'light' 

@@ -28,7 +28,16 @@ export async function GET() {
           matricula: true,
           name: true,
           role: true,
+          email: true,
+          emailVerified: true,
+          serie: true,
+          curso: true,
+          isCefet: true,
+          status: true,
           createdAt: true,
+          teacherClasses: {
+            select: { serie: true, curso: true }
+          }
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -78,9 +87,10 @@ export async function GET() {
     )
 
     const latestTokenLog = tokenLogs[0] || null
-    const dailyTokenLimit = 100000 // Cota diária TPD da Groq Free
-    const minuteTokenLimit = latestTokenLog?.limitTokensTPM || 8000 // 8.000 TPM da Groq Free
-    const dailyRequestLimit = latestTokenLog?.limitRequestsRPD || 1000 // 1.000 RPD da Groq Free
+    const isGemini = latestTokenLog?.model ? latestTokenLog.model.includes("gemini") : true
+    const dailyTokenLimit = isGemini ? 10000000 : 100000 // Gemini permite milhões de tokens/dia (1.500 req diárias)
+    const minuteTokenLimit = latestTokenLog?.limitTokensTPM || (isGemini ? 1000000 : 8000)
+    const dailyRequestLimit = latestTokenLog?.limitRequestsRPD || (isGemini ? 1500 : 1000)
 
     const tokensUsed24h = logsLast24h.reduce((sum, t) => sum + t.totalTokens, 0)
     const promptTokens24h = logsLast24h.reduce((sum, t) => sum + t.promptTokens, 0)
@@ -88,8 +98,8 @@ export async function GET() {
     const tokensRemaining24h = Math.max(dailyTokenLimit - tokensUsed24h, 0)
 
     const tokensUsed1m = logsLast1m.reduce((sum, t) => sum + t.totalTokens, 0)
-    // Se houve requisição no último minuto e a Groq retornou remainingTokensTPM, consideramos o mais restritivo;
-    // se já passou 1 minuto desde a última requisição, o saldo por minuto já resetou para 100% (8.000 TPM).
+    // Se houve requisição no último minuto e o provedor retornou remainingTokensTPM, consideramos o mais restritivo;
+    // se já passou 1 minuto desde a última requisição, o saldo por minuto já resetou para 100%.
     const tokensRemaining1m =
       logsLast1m.length > 0
         ? latestTokenLog?.remainingTokensTPM != null
@@ -119,8 +129,8 @@ export async function GET() {
       totalRequestsAllTime > 0 ? Math.round(totalTokensAllTime / totalRequestsAllTime) : 0
 
     const tokenMetrics = {
-      activeModel: latestTokenLog?.model || "openai/gpt-oss-120b",
-      fallbackModels: ["qwen/qwen3.8-27b", "gemini-3.5-flash"],
+      activeModel: latestTokenLog?.model || "gemini-3.5-flash-lite",
+      fallbackModels: ["gemini-3.5-flash", "qwen/qwen3.8-27b", "openai/gpt-oss-120b"],
       dailyTokenLimit,
       tokensUsed24h,
       promptTokens24h,
@@ -199,6 +209,7 @@ export async function GET() {
         totalAdmins: users.filter((u) => u.role === "admin").length,
         totalProfessors: users.filter((u) => u.role === "professor").length,
         totalStudents: users.filter((u) => u.role === "aluno").length,
+        pendingProfessors: users.filter((u) => u.status === "pending").length,
         totalLogs,
         totalFeedbacks: feedbacks.length,
         totalReports: reports.length,
@@ -226,6 +237,7 @@ export async function POST(req: Request) {
     const body = await req.json()
     const matricula = (body.matricula || "").trim()
     const name = (body.name || "").trim()
+    const email = (body.email || "").trim().toLowerCase() || null
     const password = body.password || ""
     const role = ["aluno", "professor", "admin"].includes(body.role) ? body.role : "aluno"
 
@@ -241,11 +253,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Já existe uma conta com esta matrícula." }, { status: 409 })
     }
 
+    if (email) {
+      const existingEmail = await prisma.user.findUnique({ where: { email } })
+      if (existingEmail) {
+        return NextResponse.json({ error: "Já existe uma conta com este e-mail." }, { status: 409 })
+      }
+    }
+
     const passwordHash = await bcrypt.hash(password, 10)
     const created = await prisma.user.create({
       data: {
         matricula,
         name,
+        email,
+        emailVerified: email ? new Date() : null,
         passwordHash,
         role,
       },
@@ -253,6 +274,8 @@ export async function POST(req: Request) {
         id: true,
         matricula: true,
         name: true,
+        email: true,
+        emailVerified: true,
         role: true,
         createdAt: true,
       },
@@ -272,21 +295,98 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json()
-    const { id, role, name, newPassword } = body
+    const {
+      id,
+      matricula,
+      role,
+      name,
+      email,
+      newPassword,
+      status,
+      serie,
+      curso,
+      isCefet,
+      teacherClasses,
+    } = body
 
     if (!id) {
       return NextResponse.json({ error: "ID do usuário é obrigatório." }, { status: 400 })
     }
 
     const updateData: Record<string, any> = {}
+
+    if (typeof matricula === "string" && matricula.trim().length > 0) {
+      const trimmedMatricula = matricula.trim()
+      const existing = await prisma.user.findFirst({
+        where: {
+          matricula: trimmedMatricula,
+          NOT: { id },
+        },
+      })
+      if (existing) {
+        return NextResponse.json(
+          { error: "Já existe outro usuário cadastrado com esta matrícula." },
+          { status: 409 }
+        )
+      }
+      updateData.matricula = trimmedMatricula
+    }
+
     if (role && ["aluno", "professor", "admin"].includes(role)) {
       updateData.role = role
+    }
+    if (status && ["active", "pending"].includes(status)) {
+      updateData.status = status
+    }
+    if (serie !== undefined) {
+      updateData.serie = typeof serie === "string" && serie.trim() ? serie.trim() : null
+    }
+    if (curso !== undefined) {
+      updateData.curso = typeof curso === "string" && curso.trim() ? curso.trim() : null
+    }
+    if (typeof isCefet === "boolean") {
+      updateData.isCefet = isCefet
     }
     if (typeof name === "string" && name.trim().length > 0) {
       updateData.name = name.trim()
     }
+    if (email !== undefined) {
+      const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : ""
+      if (cleanEmail) {
+        const existingEmail = await prisma.user.findFirst({
+          where: {
+            email: cleanEmail,
+            NOT: { id },
+          },
+        })
+        if (existingEmail) {
+          return NextResponse.json(
+            { error: "Já existe outro usuário cadastrado com este e-mail." },
+            { status: 409 }
+          )
+        }
+        updateData.email = cleanEmail
+      } else {
+        updateData.email = null
+      }
+    }
     if (typeof newPassword === "string" && newPassword.trim().length > 0) {
       updateData.passwordHash = await bcrypt.hash(newPassword.trim(), 10)
+    }
+
+    // Se turmas foram enviadas para professor, atualiza a relação
+    if (Array.isArray(teacherClasses)) {
+      await prisma.teacherClass.deleteMany({ where: { teacherId: id } })
+      if (teacherClasses.length > 0) {
+        await prisma.teacherClass.createMany({
+          data: teacherClasses.map((tc: any) => ({
+            teacherId: id,
+            serie: tc.serie,
+            curso: tc.curso,
+          })),
+          skipDuplicates: true,
+        })
+      }
     }
 
     const updated = await prisma.user.update({
@@ -296,8 +396,17 @@ export async function PATCH(req: Request) {
         id: true,
         matricula: true,
         name: true,
+        email: true,
+        emailVerified: true,
         role: true,
+        status: true,
+        serie: true,
+        curso: true,
+        isCefet: true,
         createdAt: true,
+        teacherClasses: {
+          select: { serie: true, curso: true },
+        },
       },
     })
 

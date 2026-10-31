@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
+import Link from "next/link"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { 
@@ -8,7 +9,6 @@ import {
   Lock, 
   Loader2, 
   Info, 
-  ArrowRight,
   HelpCircle
 } from "lucide-react"
 import { SocraticChatPreview } from "@/components/features/SocraticChatPreview"
@@ -61,7 +61,11 @@ export default function LoginPage() {
     })
 
     if (res?.error) {
-      setError("Credenciais inválidas. Verifique sua matrícula e senha.")
+      if (res.error.includes("PENDING_APPROVAL") || res.code === "PENDING_APPROVAL") {
+        setError("Sua conta de docente foi criada e está aguardando aprovação da administração.")
+      } else {
+        setError("Credenciais inválidas. Verifique sua matrícula e senha.")
+      }
       setIsLoading(false)
     } else {
       if (typeof window !== "undefined") {
@@ -255,17 +259,20 @@ export default function LoginPage() {
                     <span>Autenticando...</span>
                   </>
                 ) : (
-                  <>
-                    <span>Entrar no Malba</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
+                  <span>Entrar no Malba</span>
                 )}
               </Button>
             </form>
 
-            <div className="text-center pt-2 border-t border-slate-100">
-              <span className="text-[11px] text-slate-500">
-                Ambiente exclusivo para discentes e docentes do CEFET-MG
+            <div className="text-center pt-3 border-t border-slate-100 space-y-2">
+              <Link 
+                href="/cadastro"
+                className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline block"
+              >
+                Não tem uma conta? Cadastre-se como Discente ou Docente
+              </Link>
+              <span className="text-[11px] text-slate-400 block">
+                Ambiente pedagógico do CEFET-MG &bull; Iniciação Científica PIBIC
               </span>
             </div>
 

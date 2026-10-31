@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useAppStore } from "@/store/useAppStore"
 import { getModuleForTopic } from "@/data/studyMaterials"
+import { getBrazilDateString, getDailyMissionForDate } from "@/lib/dailyMission"
 import {
   Target,
   ArrowRight,
@@ -19,6 +20,7 @@ import {
   Landmark,
   Cpu,
   BookOpen,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AIAssistantProgress } from "@/components/ui/AIAssistantProgress"
@@ -73,11 +75,13 @@ export default function DashboardPage() {
   const [enemQuestions, setEnemQuestions] = useState<any[]>([])
   const [selectedYearTab, setSelectedYearTab] = useState<"1º Ano" | "2º Ano" | "3º Ano">("1º Ano")
   const [selectedStep, setSelectedStep] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const sessionId =
       typeof window !== "undefined" ? window.sessionStorage.getItem("malba_session_id") || "" : ""
 
+    setIsLoading(true)
     Promise.all([
       fetch("/api/questions").then((res) => res.json()),
       fetch(`/api/telemetry?sessionId=${encodeURIComponent(sessionId)}`).then((res) => res.json()),
@@ -96,6 +100,9 @@ export default function DashboardPage() {
         }
       })
       .catch((err) => console.error("Erro ao carregar dados do dashboard:", err))
+      .finally(() => {
+        setIsLoading(false)
+      })
   }, [matricula])
 
   // Métricas agregadas
@@ -112,52 +119,13 @@ export default function DashboardPage() {
 
   const uniqueTopics = new Set(enemQuestions.map((q) => q.topico_bncc)).size || 29
 
-  // Seleção determinística da "Missão do Dia" (3 questões: 1 Aquecimento, 1 Exploração, 1 Desafio/Revisão)
+  // Seleção determinística da "Missão do Dia" (3 questões: 1 Aquecimento, 1 Exploração, 1 Desafio)
+  // Utiliza a data padronizada no fuso horário do Brasil (America/Sao_Paulo)
   const dailyMission = useMemo(() => {
     if (enemQuestions.length === 0) return []
-    const todayKey = new Date().toISOString().slice(0, 10)
-    let seed = 0
-    for (let i = 0; i < todayKey.length; i++) {
-      seed = (seed * 31 + todayKey.charCodeAt(i)) % 100000
-    }
-
-    const pickDeterministic = (pool: any[], offset: number) => {
-      if (pool.length === 0) return enemQuestions[offset % enemQuestions.length]
-      return pool[(seed + offset) % pool.length]
-    }
-
-    const q1 = pickDeterministic(ano1.length > 0 ? ano1 : enemQuestions, 1)
-    const q2Pool = (ano2.length > 0 ? ano2 : enemQuestions).filter((q) => q.id !== q1?.id)
-    const q2 = pickDeterministic(q2Pool, 7)
-
-    // Se o aluno tiver alguma questão marcada para revisão, colocamos como 3ª missão; senão, 3º Ano
-    const reviewPool = enemQuestions.filter(
-      (q) => reviewQuestionIds.includes(String(q.id)) && q.id !== q1?.id && q.id !== q2?.id
-    )
-    const q3Pool =
-      reviewPool.length > 0
-        ? reviewPool
-        : (ano3.length > 0 ? ano3 : enemQuestions).filter((q) => q.id !== q1?.id && q.id !== q2?.id)
-    const q3 = pickDeterministic(q3Pool, 13)
-
-    return [
-      {
-        label: "1. Aquecimento",
-        badge: "1º Ano",
-        question: q1,
-      },
-      {
-        label: "2. Exploração",
-        badge: "2º Ano",
-        question: q2,
-      },
-      {
-        label: reviewPool.length > 0 ? "3. Resgate" : "3. Desafio",
-        badge: reviewPool.length > 0 ? "Revisar" : "3º Ano",
-        question: q3,
-      },
-    ].filter((item) => item.question)
-  }, [enemQuestions, reviewQuestionIds.length])
+    const todayKey = getBrazilDateString(new Date())
+    return getDailyMissionForDate(enemQuestions, todayKey)
+  }, [enemQuestions])
 
   const missionCompletedCount = dailyMission.filter((m) =>
     solvedQuestionIds.includes(String(m.question?.id))
@@ -250,13 +218,22 @@ export default function DashboardPage() {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Seu Domínio
               </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-extrabold text-slate-900">{totalSolved}</span>
-                <span className="text-xs font-semibold text-slate-400">/ {totalQuestions}</span>
-              </div>
-              <span className="text-[10px] font-bold text-emerald-600 block truncate">
-                {masteryPercent}% dominado
-              </span>
+              {isLoading ? (
+                <div className="py-1 space-y-1">
+                  <div className="h-5 w-16 bg-slate-200 animate-pulse rounded" />
+                  <div className="h-3 w-20 bg-slate-100 animate-pulse rounded" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base font-extrabold text-slate-900">{totalSolved}</span>
+                    <span className="text-xs font-semibold text-slate-400">/ {totalQuestions}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-600 block truncate">
+                    {masteryPercent}% dominado
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -279,19 +256,30 @@ export default function DashboardPage() {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Ofensiva Diária
               </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-extrabold text-slate-900">{streakDays}</span>
-                <span className="text-xs font-semibold text-slate-400">
-                  {streakDays === 1 ? "dia" : "dias"}
-                </span>
-              </div>
-              <span
-                className={`text-[10px] font-bold block truncate ${
-                  hasPracticedToday ? "text-amber-600" : "text-slate-400"
-                }`}
-              >
-                {hasPracticedToday ? "Mantida hoje! 🔥" : "Pratique hoje"}
-              </span>
+              {isLoading ? (
+                <div className="py-1 space-y-1">
+                  <div className="h-5 w-12 bg-slate-200 animate-pulse rounded" />
+                  <div className="h-3 w-20 bg-slate-100 animate-pulse rounded" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base font-extrabold text-slate-900">{streakDays}</span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {streakDays === 1 ? "dia" : "dias"}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold block truncate ${
+                      hasPracticedToday ? "text-amber-600" : "text-slate-400"
+                    }`}
+                  >
+                    {hasPracticedToday
+                      ? "Mantida hoje! 🔥"
+                      : `${missionCompletedCount}/3 da Missão`}
+                  </span>
+                </>
+              )}
             </div>
           </div>
 
@@ -304,13 +292,22 @@ export default function DashboardPage() {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Matriz BNCC
               </span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-extrabold text-slate-900">{uniqueTopics}</span>
-                <span className="text-xs font-semibold text-slate-400">Tópicos</span>
-              </div>
-              <span className="text-[10px] font-semibold text-blue-600 block truncate">
-                1ª a 3ª Série EM
-              </span>
+              {isLoading ? (
+                <div className="py-1 space-y-1">
+                  <div className="h-5 w-12 bg-slate-200 animate-pulse rounded" />
+                  <div className="h-3 w-16 bg-slate-100 animate-pulse rounded" />
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-base font-extrabold text-slate-900">{uniqueTopics}</span>
+                    <span className="text-xs font-semibold text-slate-400">Tópicos</span>
+                  </div>
+                  <span className="text-[10px] font-semibold text-blue-600 block truncate">
+                    1ª a 3ª Série EM
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -325,31 +322,40 @@ export default function DashboardPage() {
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1 bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-                    <span>Missão do Dia &bull; {missionCompletedCount}/3 Concluídas</span>
-                  </span>
-                  <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full transition-all ${
-                      hasPracticedToday
-                        ? "bg-amber-400/30 text-amber-200 border border-amber-300/40"
-                        : "bg-white/15 text-white/90"
-                    }`}
-                  >
-                    <Flame
-                      className={`w-3.5 h-3.5 ${
-                        hasPracticedToday
-                          ? "fill-amber-300 text-amber-300 animate-pulse"
-                          : "text-amber-200"
-                      }`}
-                    />
-                    <span>
-                      {streakDays > 0
-                        ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva${
-                            hasPracticedToday ? " • Mantida hoje! 🔥" : " • Pratique para manter"
-                          }`
-                        : "Comece sua Ofensiva Hoje! 🔥"}
-                    </span>
-                  </span>
+                  {isLoading ? (
+                    <>
+                      <div className="h-5 w-40 bg-white/20 animate-pulse rounded-full" />
+                      <div className="h-5 w-52 bg-white/20 animate-pulse rounded-full" />
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1 bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+                        <span>Missão do Dia &bull; {missionCompletedCount}/3 Concluídas</span>
+                      </span>
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full transition-all ${
+                          hasPracticedToday
+                            ? "bg-amber-400/30 text-amber-200 border border-amber-300/40"
+                            : "bg-white/15 text-white/90"
+                        }`}
+                      >
+                        <Flame
+                          className={`w-3.5 h-3.5 ${
+                            hasPracticedToday
+                              ? "fill-amber-300 text-amber-300 animate-pulse"
+                              : "text-amber-200"
+                          }`}
+                        />
+                        <span>
+                          {hasPracticedToday
+                            ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva • Mantida hoje! 🔥`
+                            : streakDays > 0
+                            ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva • Conclua as 3 para manter`
+                            : "Complete as 3 questões para iniciar a ofensiva! 🔥"}
+                        </span>
+                      </span>
+                    </>
+                  )}
                 </div>
                 <h2 className="text-lg font-bold">Desafio Guiado de 3 Questões (~15 min)</h2>
                 <p className="text-blue-100 text-xs leading-relaxed max-w-xl">
@@ -359,17 +365,52 @@ export default function DashboardPage() {
 
               <Button
                 onClick={handlePraticarAleatoria}
-                className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs h-10 px-4 rounded-xl shrink-0 shadow-xs flex items-center gap-2"
+                disabled={isLoading}
+                className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs h-10 px-4 rounded-xl shrink-0 shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-80"
               >
-                <Shuffle className="w-3.5 h-3.5" />
-                <span>
-                  {missionCompletedCount < 3 ? "Iniciar Próxima da Missão" : "Sortear Nova Questão"}
-                </span>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                    <span>Carregando Missão...</span>
+                  </>
+                ) : (
+                  <>
+                    <Shuffle className="w-3.5 h-3.5" />
+                    <span>
+                      {missionCompletedCount < 3 ? "Iniciar Próxima da Missão" : "Sortear Nova Questão"}
+                    </span>
+                  </>
+                )}
               </Button>
             </div>
 
             {/* Os 3 Cards da Missão Diária */}
-            {dailyMission.length > 0 && (
+            {isLoading ? (
+              <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/60">
+                {[1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="p-3.5 rounded-xl border border-slate-200/80 bg-white animate-pulse space-y-3 h-36 flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="h-3 w-20 bg-slate-200 rounded" />
+                        <div className="h-4 w-12 bg-slate-200 rounded-full" />
+                      </div>
+                      <div className="h-4 w-32 bg-slate-200 rounded" />
+                      <div className="space-y-1">
+                        <div className="h-2.5 w-full bg-slate-100 rounded" />
+                        <div className="h-2.5 w-3/4 bg-slate-100 rounded" />
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <div className="h-3 w-10 bg-slate-200 rounded" />
+                      <div className="h-3 w-14 bg-slate-200 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : dailyMission.length > 0 ? (
               <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/60">
                 {dailyMission.map((m, idx) => {
                   const q = m.question
@@ -445,7 +486,7 @@ export default function DashboardPage() {
                   )
                 })}
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Abas por Série (1º, 2º e 3º Ano) com Domínio e Link para Videoaula */}
@@ -480,17 +521,43 @@ export default function DashboardPage() {
 
             {/* Lista com Barras de Progresso e Botões de Aula / Prática */}
             <div className="space-y-3 pt-1">
-              {currentTopics.slice(0, 6).map(([topic, stats]) => {
-                const percentWidth = Math.round((stats.total / maxTopicCount) * 100)
-                const masteryPct =
-                  stats.total > 0 ? Math.round((stats.solved / stats.total) * 100) : 0
-                const mod = getModuleForTopic(topic)
-
-                return (
+              {isLoading ? (
+                [1, 2, 3, 4, 5].map((i) => (
                   <div
-                    key={topic}
-                    className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:border-blue-200 transition-colors space-y-2"
+                    key={i}
+                    className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 animate-pulse space-y-2.5"
                   >
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-36 bg-slate-200 rounded" />
+                        <div className="h-4 w-20 bg-slate-100 rounded-full" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-7 w-20 bg-slate-200/70 rounded-lg" />
+                        <div className="h-7 w-24 bg-slate-200/70 rounded-lg" />
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-200/60 rounded-full h-1.5 overflow-hidden">
+                      <div className="bg-slate-300 h-full rounded-full w-1/4" />
+                    </div>
+                  </div>
+                ))
+              ) : currentTopics.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs">
+                  Nenhuma matéria disponível para esta série.
+                </div>
+              ) : (
+                currentTopics.slice(0, 6).map(([topic, stats]) => {
+                  const percentWidth = Math.round((stats.total / maxTopicCount) * 100)
+                  const masteryPct =
+                    stats.total > 0 ? Math.round((stats.solved / stats.total) * 100) : 0
+                  const mod = getModuleForTopic(topic)
+
+                  return (
+                    <div
+                      key={topic}
+                      className="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 hover:border-blue-200 transition-colors space-y-2"
+                    >
                     <div className="flex flex-wrap justify-between items-center gap-2 text-xs">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-bold text-slate-800 truncate">{topic}</span>
@@ -530,7 +597,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 )
-              })}
+              }))}
             </div>
 
             <div className="pt-2 flex flex-wrap justify-between items-center gap-2 text-xs border-t border-slate-100">

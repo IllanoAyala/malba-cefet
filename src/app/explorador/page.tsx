@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { MathSnippet } from "@/components/ui/MathSnippet"
 import { TabGuard } from "@/components/layout/TabGuard"
+import { getAllowedSeries } from "@/lib/curriculum"
 
 interface EnemQuestion {
   id: string | number
@@ -92,8 +93,11 @@ function ExploradorContent() {
       })
   }, [matricula])
 
-  // Filtros Dinâmicos
-  const years = ["Todos", "1º Ano", "2º Ano", "3º Ano"]
+  // Filtros Dinâmicos baseados nas séries liberadas
+  const userRole = (session?.user as any)?.role
+  const userSerie = (session?.user as any)?.serie
+  const allowed = getAllowedSeries(userRole, userSerie)
+  const years = allowed.length > 1 ? ["Todos", ...allowed] : allowed
   const rawTopics = Array.from(new Set(enemQuestions.map((q) => q.topico_bncc))).sort((a, b) =>
     a.localeCompare(b)
   )

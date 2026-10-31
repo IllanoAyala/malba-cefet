@@ -56,9 +56,75 @@ model User {
   id            String   @id @default(uuid())
   matricula     String   @unique
   name          String
+  email         String?  @unique
+  emailVerified DateTime?
   passwordHash  String
   role          String   @default("aluno") // 'aluno', 'professor' ou 'admin'
+  serie         String?  // '1º Ano', '2º Ano', '3º Ano' (para alunos)
+  curso         String?  // 'Informática', 'Mecatrônica', 'Produção de Moda', 'Externo / Outro'
+  isCefet       Boolean  @default(true)
+  status        String   @default("active") // 'active' ou 'pending' (para moderação de docentes)
+  consentAt     DateTime?
   createdAt     DateTime @default(now())
+
+  teacherClasses TeacherClass[]
+  accessSessions AccessSession[]
+  activityEvents ActivityEvent[]
+}
+
+// Códigos OTP de Verificação por E-mail (Cadastro e Recuperação de Senha)
+model VerificationCode {
+  id         String   @id @default(uuid())
+  email      String
+  code       String
+  purpose    String   @default("registration") // 'registration' ou 'password_reset'
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([email, code])
+}
+
+// Turmas/Cursos atribuídos ao docente
+model TeacherClass {
+  id        String   @id @default(uuid())
+  teacherId String
+  serie     String   // '1º Ano', '2º Ano', '3º Ano'
+  curso     String   // 'Informática', 'Mecatrônica', 'Produção de Moda'
+  createdAt DateTime @default(now())
+
+  teacher   User     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, serie, curso])
+  @@index([serie, curso])
+}
+
+// Rastreamento de Acesso e Tempo Logado
+model AccessSession {
+  id         String   @id @default(uuid())
+  userId     String
+  startedAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, startedAt])
+}
+
+// Registro Granular de Eventos de Aprendizagem
+model ActivityEvent {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String   // 'page_view' | 'module_view' | 'video_open' | 'question_open' | 'question_answer'
+  target    String?  // identificador de página, módulo ou questão
+  meta      String?  // JSON stringificado adicional
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
 }
 
 // Reportes de erros em questões (OCR, gabarito, formatação)

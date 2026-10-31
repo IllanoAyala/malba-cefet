@@ -3,7 +3,7 @@ export interface NavTabItem {
   href: string
   label: string
   description: string
-  iconName: "Compass" | "PlayCircle" | "BookOpen" | "BarChart2" | "BookMarked" | "GraduationCap" | "ShieldCheck" | "QrCode"
+  iconName: "Compass" | "PlayCircle" | "BookOpen" | "BarChart2" | "BookMarked" | "GraduationCap" | "ShieldCheck" | "QrCode" | "Users"
   enabled: boolean
   allowedRoles: ("aluno" | "professor")[]
   isCore?: boolean
@@ -56,6 +56,15 @@ export const DEFAULT_NAV_TABS: NavTabItem[] = [
     iconName: "BookMarked",
     enabled: true,
     allowedRoles: ["aluno"],
+  },
+  {
+    id: "turmas",
+    href: "/professor/turmas",
+    label: "Minhas Turmas",
+    description: "Acompanhamento discente: histórico de acessos, tempo logado e questões resolvidas.",
+    iconName: "Users",
+    enabled: true,
+    allowedRoles: ["professor"],
   },
   {
     id: "professor",

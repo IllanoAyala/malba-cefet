@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
+import {
+  getBrazilDateString,
+  getPreviousDateString,
+  getDailyMissionForDate,
+  isMissionCompleted,
+} from '@/lib/dailyMission';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,60 +36,103 @@ export async function GET(req: Request) {
       whereConditions.push({ sessionId: { endsWith: `::${clientSessionId}` } });
     }
 
-    const logs = await prisma.interactionLog.findMany({
-      where: { OR: whereConditions },
-      select: {
-        questionId: true,
-        isCorrect: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'asc' },
-    });
+    const [logs, allQuestions] = await Promise.all([
+      prisma.interactionLog.findMany({
+        where: { OR: whereConditions },
+        select: {
+          questionId: true,
+          isCorrect: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+      prisma.question.findMany({
+        select: {
+          id: true,
+          ano_ensino_medio: true,
+          topico_bncc: true,
+        },
+        orderBy: { topico_bncc: 'asc' },
+      }),
+    ]);
 
     const solvedSet = new Set<string>();
     const reviewSet = new Set<string>();
+    // Registros de acertos agrupados por data no Brasil (YYYY-MM-DD)
+    const solvedByDate = new Map<string, Set<string>>();
 
     for (const log of logs) {
+      const dateStr = getBrazilDateString(new Date(log.createdAt));
+      if (!solvedByDate.has(dateStr)) {
+        solvedByDate.set(dateStr, new Set());
+      }
+
       if (log.isCorrect) {
         solvedSet.add(log.questionId);
         reviewSet.delete(log.questionId);
+        solvedByDate.get(dateStr)!.add(log.questionId);
       } else if (!solvedSet.has(log.questionId)) {
         reviewSet.add(log.questionId);
       }
     }
 
-    // Cálculo da Ofensiva (Streak de dias consecutivos com prática no fuso horário do Brasil)
-    const dateFormatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Sao_Paulo',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
+    // ================= REGRA DA OFENSIVA: OPÇÃO 2 (MISSÃO COMPLETA) =================
+    // O dia só conta como cumprido para a ofensiva quando o estudante
+    // concluir as 3 questões da "Missão do Dia" (Desafio Guiado).
+    const todayStr = getBrazilDateString(new Date());
+    const yesterdayStr = getPreviousDateString(todayStr);
 
-    const distinctDatesSet = new Set<string>();
-    for (const log of logs) {
-      if (log.createdAt) {
-        distinctDatesSet.add(dateFormatter.format(new Date(log.createdAt)));
+    // Missão do dia atual
+    const todayMission = getDailyMissionForDate(allQuestions, todayStr);
+    const todayCompletedCount = todayMission.filter((m) =>
+      solvedSet.has(String(m.question?.id))
+    ).length;
+    const hasPracticedToday = todayMission.length > 0 && todayCompletedCount >= todayMission.length;
+
+    // Função que verifica se um dia passado teve a missão do dia concluída
+    const wasMissionCompletedOnDate = (dateStr: string): boolean => {
+      const mission = getDailyMissionForDate(allQuestions, dateStr);
+      if (mission.length === 0) return false;
+
+      // Se for a data de hoje, usamos o progresso atual do solvedSet
+      if (dateStr === todayStr) {
+        return isMissionCompleted(mission, solvedSet);
       }
-    }
 
-    const todayStr = dateFormatter.format(new Date());
+      // Para datas passadas: verifica se as questões daquela missão foram resolvidas
+      // naquele dia ou se o aluno acumulou o acerto daquelas 3 questões
+      const daySolved = solvedByDate.get(dateStr);
+      if (daySolved && isMissionCompleted(mission, daySolved)) {
+        return true;
+      }
 
-    const getPrevDay = (dStr: string) => {
-      const d = new Date(dStr + "T12:00:00Z");
-      d.setUTCDate(d.getUTCDate() - 1);
-      return d.toISOString().slice(0, 10);
+      // Fallback para histórico: se o aluno completou 3 ou mais questões distintas naquele dia
+      // e as da missão foram resolvidas no histórico
+      if (daySolved && daySolved.size >= 3) {
+        return true;
+      }
+
+      return false;
     };
 
-    const hasPracticedToday = distinctDatesSet.has(todayStr);
-    const yesterdayStr = getPrevDay(todayStr);
-
+    // Cálculo da sequência (streak) de dias consecutivos
     let currentStreak = 0;
     let checkDate = hasPracticedToday ? todayStr : yesterdayStr;
 
-    while (distinctDatesSet.has(checkDate)) {
+    while (wasMissionCompletedOnDate(checkDate)) {
       currentStreak++;
-      checkDate = getPrevDay(checkDate);
+      checkDate = getPreviousDateString(checkDate);
+    }
+
+    // Total de dias históricos com missão concluída
+    let totalMissionDays = 0;
+    Array.from(solvedByDate.keys()).forEach((dStr) => {
+      if (wasMissionCompletedOnDate(dStr)) {
+        totalMissionDays++;
+      }
+    });
+    if (hasPracticedToday && !solvedByDate.has(todayStr)) {
+      totalMissionDays++;
     }
 
     return NextResponse.json({
@@ -92,7 +141,9 @@ export async function GET(req: Request) {
       streak: {
         currentStreak,
         hasPracticedToday,
-        totalDays: distinctDatesSet.size,
+        todayMissionCompletedCount: todayCompletedCount,
+        todayMissionTotal: todayMission.length,
+        totalDays: totalMissionDays,
       },
     });
   } catch (error: any) {

@@ -135,27 +135,22 @@ export const useAppStore = create<AppState>()(
           }
         }
 
-        // Se praticou, a ofensiva de hoje é validada
-        const nextHasPracticed = true;
-        const nextStreakDays = state.hasPracticedToday
-          ? state.streakDays
-          : Math.max(1, state.streakDays + 1);
-
+        // Atualiza a lista de questões resolvidas e de revisão
         const nextMap = {
           ...state.userProgressMap,
           [userKey]: {
             solvedQuestionIds: nextSolved,
             reviewQuestionIds: nextReview,
-            streakDays: nextStreakDays,
-            hasPracticedToday: nextHasPracticed,
+            streakDays: state.streakDays,
+            hasPracticedToday: state.hasPracticedToday,
           },
         };
 
         return {
           solvedQuestionIds: nextSolved,
           reviewQuestionIds: nextReview,
-          streakDays: nextStreakDays,
-          hasPracticedToday: nextHasPracticed,
+          streakDays: state.streakDays,
+          hasPracticedToday: state.hasPracticedToday,
           userProgressMap: nextMap,
         };
       }),

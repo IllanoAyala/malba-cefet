@@ -8,7 +8,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   providers: [
     CredentialsProvider({
-      name: "SIGAA CEFET-MG",
+      name: "Malba CEFET-MG",
       credentials: {
         matricula: { label: "Matrícula/CPF", type: "text" },
         password: { label: "Senha", type: "password" }
@@ -40,11 +40,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
+        if (user.status === "pending") {
+          throw new Error("PENDING_APPROVAL")
+        }
+
         return {
           id: user.id,
           name: user.name,
           role: user.role,
-          matricula: user.matricula
+          matricula: user.matricula,
+          serie: user.serie,
+          curso: user.curso,
+          isCefet: user.isCefet,
+          status: user.status,
         }
       }
     })

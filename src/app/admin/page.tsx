@@ -26,16 +26,25 @@ import {
   Zap,
   BookOpen,
   SlidersHorizontal,
+  Pencil,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuestionReviewTab } from "@/components/admin/QuestionReviewTab"
 import { TabManagementTab } from "@/components/admin/TabManagementTab"
+import { EditUserModal } from "@/components/admin/EditUserModal"
 
 interface MonitoredUser {
   id: string
   matricula: string
   name: string
+  email?: string | null
+  emailVerified?: string | null
   role: "aluno" | "professor" | "admin"
+  status?: string
+  serie?: string | null
+  curso?: string | null
+  isCefet?: boolean
+  teacherClasses?: Array<{ serie: string; curso: string }>
   createdAt: string
   questionsSolved: number
   correctAnswers: number
@@ -89,6 +98,7 @@ export default function AdminDashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [newMatricula, setNewMatricula] = useState("")
   const [newName, setNewName] = useState("")
+  const [newEmail, setNewEmail] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [newRole, setNewRole] = useState<"aluno" | "professor" | "admin">("aluno")
   const [formError, setFormError] = useState("")
@@ -97,6 +107,22 @@ export default function AdminDashboardPage() {
   // Redefinição rápida de senha
   const [resetUserId, setResetUserId] = useState<string | null>(null)
   const [resetPasswordValue, setResetPasswordValue] = useState("")
+
+  // Modal de edição detalhada de usuário
+  const [editingUser, setEditingUser] = useState<MonitoredUser | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+
+  const handleOpenEditUser = (user: MonitoredUser) => {
+    setEditingUser(user)
+    setIsEditModalOpen(true)
+  }
+
+  const handleEditUserSuccess = async (updatedUser: any) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === updatedUser.id ? { ...u, ...updatedUser } : u))
+    )
+    await fetchAdminData()
+  }
 
   const userRole = (session?.user as any)?.role
 
@@ -144,6 +170,7 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({
           matricula: newMatricula,
           name: newName,
+          email: newEmail.trim() ? newEmail.trim() : undefined,
           password: newPassword,
           role: newRole,
         }),
@@ -154,6 +181,7 @@ export default function AdminDashboardPage() {
       } else {
         setNewMatricula("")
         setNewName("")
+        setNewEmail("")
         setNewPassword("")
         setNewRole("aluno")
         setIsCreateOpen(false)
@@ -178,6 +206,21 @@ export default function AdminDashboardPage() {
       }
     } catch (err) {
       console.error("Erro ao alterar perfil:", err)
+    }
+  }
+
+  const handleApproveUser = async (userId: string) => {
+    try {
+      const res = await fetch("/api/admin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: userId, status: "active" }),
+      })
+      if (res.ok) {
+        await fetchAdminData()
+      }
+    } catch (err) {
+      console.error("Erro ao aprovar docente:", err)
     }
   }
 
@@ -403,7 +446,7 @@ export default function AdminDashboardPage() {
               </h2>
             </div>
             <p className="text-xs text-slate-500">
-              Os limites da Groq renovam automaticamente com o tempo: <strong>a cada 60 segundos</strong> para taxa por minuto (TPM) e <strong>em janela móvel de 24 horas</strong> para a cota diária (TPD / RPD).
+              Os limites de IA (Google Gemini 1.000.000 TPM e Groq) renovam automaticamente: <strong>a cada 60 segundos</strong> para taxa por minuto (TPM) e <strong>em janela móvel de 24 horas</strong> para cota diária (TPD / RPD).
             </p>
           </div>
 
@@ -548,7 +591,9 @@ export default function AdminDashboardPage() {
                     ? `Renova em ${tokenMetrics.secondsUntilMinuteReset}s`
                     : "Janela de 1 min 100% livre"}
                 </span>
-                <span>Limite: 8.000 tokens/min</span>
+                <span>
+                  Limite: {(tokenMetrics?.minuteTokenLimit ?? 1000000).toLocaleString("pt-BR")} tokens/min
+                </span>
               </div>
             </div>
           </div>
@@ -561,7 +606,7 @@ export default function AdminDashboardPage() {
                   Requisições Diárias (RPD) &amp; Total
                 </span>
                 <span className="text-[11px] font-bold text-indigo-600">
-                  {(tokenMetrics?.requestsRemaining24h ?? 1000).toLocaleString("pt-BR")} restantes hoje
+                  {(tokenMetrics?.requestsRemaining24h ?? 1500).toLocaleString("pt-BR")} restantes hoje
                 </span>
               </div>
 
@@ -573,7 +618,7 @@ export default function AdminDashboardPage() {
                   <p className="text-lg font-black text-slate-900 mt-0.5">
                     {(tokenMetrics?.requestsUsed24h ?? 0).toLocaleString("pt-BR")}{" "}
                     <span className="text-xs font-semibold text-slate-400">
-                      / {(tokenMetrics?.dailyRequestLimit ?? 1000).toLocaleString("pt-BR")}
+                      / {(tokenMetrics?.dailyRequestLimit ?? 1500).toLocaleString("pt-BR")}
                     </span>
                   </p>
                   <span className="text-[10px] text-slate-400">
@@ -596,8 +641,8 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="pt-1 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-500">
-              <span>
-                <strong>Fallbacks ativos:</strong> Qwen 3.8 27B &bull; Gemini 3.5 Flash
+              <span className="truncate max-w-[70%]">
+                <strong>Fallbacks ativos:</strong> {tokenMetrics?.fallbackModels?.join(" • ") || "Gemini 3.5 Flash • Qwen 3.8 27B"}
               </span>
               <span>
                 {tokenMetrics?.lastCallAt
@@ -610,6 +655,71 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         </div>
+
+        {/* Histórico Recente de Chamadas de IA */}
+        {tokenMetrics?.recentCalls && tokenMetrics.recentCalls.length > 0 && (
+          <div className="pt-3 border-t border-slate-100 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <Activity className="w-3.5 h-3.5 text-blue-600" />
+                Últimas Chamadas Registradas em Tempo Real
+              </span>
+              <span className="text-[11px] text-slate-400">
+                Mostrando as {Math.min(tokenMetrics.recentCalls.length, 5)} respostas mais recentes
+              </span>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
+                  <tr>
+                    <th className="py-2 px-3">Horário</th>
+                    <th className="py-2 px-3">Modelo</th>
+                    <th className="py-2 px-3 text-right">Entrada</th>
+                    <th className="py-2 px-3 text-right">Saída</th>
+                    <th className="py-2 px-3 text-right">Total Tokens</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-slate-700">
+                  {tokenMetrics.recentCalls.slice(0, 5).map((call: any) => {
+                    const isGem = call.model?.includes("gemini")
+                    return (
+                      <tr key={call.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-2 px-3 font-mono text-[11px] text-slate-500">
+                          {new Date(call.createdAt).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </td>
+                        <td className="py-2 px-3 font-medium">
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                              isGem
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-purple-50 text-purple-700 border border-purple-200"
+                            }`}
+                          >
+                            {call.model}
+                          </span>
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-500">
+                          {call.promptTokens.toLocaleString("pt-BR")}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono text-slate-500">
+                          {call.completionTokens.toLocaleString("pt-BR")}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
+                          {call.totalTokens.toLocaleString("pt-BR")}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ================= 3. TABELA DE CONTAS PRESENTES & GESTÃO DE ACESSOS ================= */}
@@ -679,7 +789,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               <div>
                 <label className="text-[11px] font-bold text-slate-700 block mb-1">Matrícula / Login</label>
                 <input
@@ -700,6 +810,16 @@ export default function AdminDashboardPage() {
                   placeholder="Nome do estudante ou docente"
                   className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs"
                   required
+                />
+              </div>
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">E-mail (Opcional)</label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="usuario@cefetmg.br"
+                  className="w-full h-9 px-3 bg-white border border-slate-200 rounded-xl text-xs"
                 />
               </div>
               <div>
@@ -756,10 +876,14 @@ export default function AdminDashboardPage() {
             <tbody className="divide-y divide-slate-100 text-xs">
               {filteredUsers.map((u) => (
                 <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-4 px-6 font-bold text-slate-900">
+                  <td
+                    className="py-4 px-6 font-bold text-slate-900 cursor-pointer group"
+                    onClick={() => handleOpenEditUser(u)}
+                    title="Clique para editar dados completos do usuário"
+                  >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-[11px] shrink-0 ${
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-[11px] shrink-0 group-hover:scale-105 transition-transform ${
                           u.role === "admin"
                             ? "bg-indigo-600"
                             : u.role === "professor"
@@ -770,9 +894,42 @@ export default function AdminDashboardPage() {
                         {u.name.substring(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">{u.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
+                            <span>{u.name}</span>
+                            <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-100 text-blue-500 transition-opacity" />
+                          </p>
+                          {u.status === "pending" && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                              Pendente
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {u.serie && u.curso ? `${u.serie} • ${u.curso}` : u.serie || u.curso || "Perfil geral"}
+                        </div>
+                        {u.email && (
+                          <div className="text-[10px] text-slate-400 font-mono truncate max-w-[200px]" title={u.email}>
+                            {u.email}
+                          </div>
+                        )}
+                        {u.status === "pending" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleApproveUser(u.id)
+                            }}
+                            className="mt-1 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold shadow-2xs transition-colors"
+                          >
+                            ✓ Aprovar Acesso Docente
+                          </button>
+                        )}
                         {resetUserId === u.id && (
-                          <div className="mt-1.5 flex items-center gap-1.5">
+                          <div
+                            className="mt-1.5 flex items-center gap-1.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <input
                               type="text"
                               value={resetPasswordValue}
@@ -861,6 +1018,15 @@ export default function AdminDashboardPage() {
 
                   <td className="py-4 px-6 text-right">
                     <div className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditUser(u)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="Editar cadastro completo"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -956,6 +1122,17 @@ export default function AdminDashboardPage() {
       </div>
       </>
       )}
+
+      {/* Modal de Edição Completa do Usuário */}
+      <EditUserModal
+        user={editingUser}
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingUser(null)
+        }}
+        onSaveSuccess={handleEditUserSuccess}
+      />
 
     </div>
   )
