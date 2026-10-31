@@ -286,10 +286,10 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans pb-24 md:pb-8">
       
       {/* ================= 1. CABEÇALHO DO PAINEL ADMIN & DOWNLOADS DA PESQUISA ================= */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold uppercase tracking-wider">
             <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
@@ -304,10 +304,10 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Botões de Download de Dados para Pesquisa */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
           <button
             onClick={fetchAdminData}
-            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="h-10 px-3.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer w-full sm:w-auto"
             title="Atualizar dados agora"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -317,7 +317,7 @@ export default function AdminDashboardPage() {
           <a
             href="/api/telemetry/export?type=users"
             download
-            className="h-10 px-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center gap-2 transition-colors shadow-2xs"
+            className="h-10 px-4 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-2xs w-full sm:w-auto"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Baixar Contas (CSV)</span>
@@ -326,7 +326,7 @@ export default function AdminDashboardPage() {
           <a
             href="/api/telemetry/export?type=telemetry"
             download
-            className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-2 transition-colors shadow-xs"
+            className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-xs w-full sm:w-auto"
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Exportar Telemetria CSV</span>
@@ -335,7 +335,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* ================= SELETOR DE ABAS PRINCIPAIS DO PAINEL ADMIN ================= */}
-      <div className="flex border-b border-slate-200 gap-2 pt-1">
+      <div className="flex border-b border-slate-200 gap-2 pt-1 overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           type="button"
           onClick={() => setAdminTab("monitoring")}

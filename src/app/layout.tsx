@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import "katex/dist/katex.min.css"
 import { Plus_Jakarta_Sans, Lora, Outfit, Inter } from "next/font/google"
@@ -7,6 +7,13 @@ import { SessionSync } from "@/components/layout/SessionSync"
 import { ActivityTracker } from "@/components/layout/ActivityTracker"
 import { SessionProvider } from "next-auth/react"
 import { getNavigationSettings } from "@/lib/navigationSettings"
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#2563eb",
+}
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],

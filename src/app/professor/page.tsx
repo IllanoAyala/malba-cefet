@@ -204,9 +204,9 @@ export default function ProfessorPage() {
 
   return (
     <TabGuard tabId="professor">
-      <div className="p-8 max-w-6xl mx-auto w-full space-y-12 print:p-0 print:space-y-6">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 sm:space-y-12 print:p-0 print:space-y-6 pb-24 md:pb-8">
       {/* HEADER PADRONIZADO */}
-      <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-8 lg:p-10 text-white relative overflow-hidden shadow-xl border border-slate-800 mb-8 print:hidden">
+      <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-5 sm:p-8 lg:p-10 text-white relative overflow-hidden shadow-xl border border-slate-800 mb-8 print:hidden">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
             <div className="hidden md:flex w-16 h-16 bg-white/10 rounded-2xl items-center justify-center backdrop-blur-md border border-white/20 shadow-xl shrink-0">
@@ -221,21 +221,21 @@ export default function ProfessorPage() {
                   GTMAT CEFET-MG + PIC/OBMEP
                 </span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-2">
                 Portal Docente &amp; Roteiros de Aula
               </h1>
-              <p className="text-blue-100/80 text-base md:text-lg max-w-2xl font-light leading-relaxed">
+              <p className="text-blue-100/80 text-sm sm:text-base md:text-lg max-w-2xl font-light leading-relaxed">
                 Planeje sequências didáticas para toda a Matemática do Ensino Médio (1º, 2º e 3º Ano) integrando o <strong>Arco de Maguerez</strong>, as videoaulas e unidades do <strong>GTMAT CEFET-MG</strong> e as apostilas do <strong>PIC/OBMEP</strong>.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap lg:flex-col gap-2.5 shrink-0">
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 w-full lg:w-auto">
             <a
               href={GTMAT_PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-xs font-bold text-blue-100 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/40 text-xs font-bold text-blue-100 transition-colors w-full sm:w-auto"
             >
               <Landmark className="w-4 h-4 text-blue-300" />
               <span>Portal Docente GTMAT CEFET-MG</span>
@@ -245,7 +245,7 @@ export default function ProfessorPage() {
               href={OBMEP_PORTAL_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-xs font-bold text-amber-100 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-xs font-bold text-amber-100 transition-colors w-full sm:w-auto"
             >
               <Award className="w-4 h-4 text-amber-300" />
               <span>Acervo de Apostilas PIC / OBMEP</span>
@@ -323,11 +323,11 @@ export default function ProfessorPage() {
               </div>
 
               {/* Seletor de Modo */}
-              <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 self-start">
+              <div className="flex flex-col sm:inline-flex sm:flex-row rounded-xl bg-slate-100 p-1 border border-slate-200 w-full sm:w-auto gap-1">
                 <button
                   type="button"
                   onClick={() => setPlanMode("module")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
                     planMode === "module"
                       ? "bg-blue-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"
@@ -338,7 +338,7 @@ export default function ProfessorPage() {
                 <button
                   type="button"
                   onClick={() => setPlanMode("question")}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer text-center ${
                     planMode === "question"
                       ? "bg-blue-600 text-white shadow-xs"
                       : "text-slate-600 hover:text-slate-900"

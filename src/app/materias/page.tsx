@@ -171,7 +171,7 @@ function MateriasContent() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans pb-24 md:pb-8">
       {/* ================= CABEÇALHO DE MATÉRIAS, GTMAT CEFET-MG & OBMEP ================= */}
       {/* ================= CABEÇALHO MODERNO DE MATÉRIAS & VIDEOAULAS ================= */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs relative overflow-hidden">
@@ -255,7 +255,7 @@ function MateriasContent() {
       {/* ================= GRID PRINCIPAL: LISTA DE MATÉRIAS (ESQ) + ESTÚDIO DE AULA (DIR) ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* COLUNA ESQUERDA (4 COLUNAS): TRILHA DE MÓDULOS (COM SCROLLBAR E FIXAÇÃO STICKY) */}
-        <div className="lg:col-span-4 space-y-3 lg:sticky lg:top-6 self-start">
+        <div className="order-2 lg:order-1 lg:col-span-4 space-y-3 lg:sticky lg:top-6 self-start">
           <div className="flex items-center justify-between px-1">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
               <Layers className="w-3.5 h-3.5 text-blue-600" />
@@ -353,7 +353,33 @@ function MateriasContent() {
         </div>
 
         {/* COLUNA DIREITA (8 COLUNAS): PLAYER (PRINCIPAL GTMAT + SECUNDÁRIO) + FONTES GTMAT/OBMEP + FÓRMULAS */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="order-1 lg:order-2 lg:col-span-8 space-y-6">
+          {/* Seletor Rápido de Módulo no Mobile (exclusivo telas menores que LG) */}
+          <div className="lg:hidden flex items-center justify-between gap-3 p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl">
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-700 block">
+                Módulo Selecionado
+              </span>
+              <p className="text-xs font-bold text-slate-900 truncate">
+                {activeModule.title}
+              </p>
+            </div>
+            <select
+              value={activeModuleId}
+              onChange={(e) => {
+                setActiveModuleId(e.target.value)
+                setMediaSource("gtmat")
+              }}
+              className="h-10 px-3 rounded-xl bg-white border border-blue-200 text-xs font-bold text-blue-700 focus:outline-none shrink-0"
+            >
+              {filteredModules.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.year} &bull; {m.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* CARD 1: PLAYER DE VIDEOAULA COM SELETOR DE MÍDIA PRINCIPAL (GTMAT) E SECUNDÁRIA */}
           <div className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs">
             {/* Barra Superior de Escolha de Mídia: Principal (GTMAT CEFET-MG) vs Secundária */}

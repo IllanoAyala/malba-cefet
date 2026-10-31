@@ -61,7 +61,7 @@ export default function CadernoPage() {
 
   return (
     <TabGuard tabId="caderno">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto w-full space-y-8 animate-in fade-in duration-300 pb-24 md:pb-8">
       {/* Cabeçalho */}
       <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-6 sm:p-8 text-white shadow-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start gap-4">

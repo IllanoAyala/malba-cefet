@@ -7,11 +7,11 @@ import { TabGuard } from "@/components/layout/TabGuard"
 export default function TutorialIAPage() {
   return (
     <TabGuard tabId="tutorial">
-      <div className="flex-1 overflow-y-auto bg-slate-50 p-6 md:p-10 hide-scrollbar">
+      <div className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 md:p-10 hide-scrollbar pb-24 md:pb-10">
       <div className="max-w-5xl mx-auto space-y-8">
         
       {/* HEADER PADRONIZADO */}
-      <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-8 lg:p-10 text-white relative overflow-hidden shadow-xl border border-slate-800 mb-10">
+      <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] rounded-3xl p-5 sm:p-8 lg:p-10 text-white relative overflow-hidden shadow-xl border border-slate-800 mb-8 sm:mb-10">
         <div className="relative z-10 flex items-start gap-4">
           <div className="hidden md:flex w-16 h-16 bg-white/10 rounded-2xl items-center justify-center backdrop-blur-md border border-white/20 shadow-xl shrink-0">
             <BookOpen className="w-8 h-8 text-white" />

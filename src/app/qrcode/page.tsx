@@ -83,7 +83,7 @@ export default function QrCodePage() {
 
   return (
     <TabGuard tabId="qrcode">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6 font-sans">
+      <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto w-full space-y-6 font-sans pb-24 md:pb-8">
       
       {/* ================= CABEÇALHO DA PÁGINA ================= */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">

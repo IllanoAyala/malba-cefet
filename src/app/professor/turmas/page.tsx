@@ -173,9 +173,9 @@ export default function ProfessorTurmasPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto pb-24 md:pb-8">
       {/* Cabeçalho Institucional da Página */}
-      <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="bg-white rounded-3xl border border-slate-200/80 p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200/70">
@@ -201,7 +201,7 @@ export default function ProfessorTurmasPage() {
         <Button
           onClick={handleExportCSV}
           variant="outline"
-          className="rounded-xl text-xs font-bold gap-2 shrink-0 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-700 hover:border-blue-200 shadow-2xs h-10 px-4 cursor-pointer"
+          className="rounded-xl text-xs font-bold gap-2 shrink-0 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-700 hover:border-blue-200 shadow-2xs h-10 px-4 cursor-pointer w-full md:w-auto justify-center"
           disabled={filteredStudents.length === 0}
         >
           <Download className="w-4 h-4 text-blue-600" />
@@ -302,9 +302,10 @@ export default function ProfessorTurmasPage() {
         </div>
       </div>
 
-      {/* Tabela de Estudantes */}
+      {/* Tabela de Estudantes (Tablet & Desktop) + Cards (Mobile) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Visualização em Tabela para Tablets e Desktops */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 uppercase font-bold tracking-wider text-[10px]">
               <tr>
@@ -374,7 +375,7 @@ export default function ProfessorTurmasPage() {
                         size="sm"
                         variant="ghost"
                         onClick={() => setSelectedStudent(st)}
-                        className="rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-xs font-bold gap-1"
+                        className="rounded-xl text-blue-600 hover:text-blue-800 hover:bg-blue-50 text-xs font-bold gap-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" /> Ver Histórico
                       </Button>
@@ -385,12 +386,62 @@ export default function ProfessorTurmasPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Visualização em Cartões para Smartphones (< md) */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredStudents.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-xs">
+              Nenhum aluno encontrado para os filtros selecionados.
+            </div>
+          ) : (
+            filteredStudents.map((st) => (
+              <div key={st.id} className="p-4 space-y-3 bg-white">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">{st.name}</h3>
+                    <p className="text-[11px] text-slate-500 font-mono">
+                      Matrícula: {st.matricula} &bull; {st.curso}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] shrink-0 font-bold">
+                    {st.serie}
+                  </Badge>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px]">
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Hoje</span>
+                    <span className="font-bold text-slate-800 text-xs">{st.metrics.accessesToday}h</span>
+                  </div>
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Tempo</span>
+                    <span className="font-bold text-slate-800 text-xs">{formatMinutes(st.metrics.totalTimeLoggedMinutes)}</span>
+                  </div>
+                  <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <span className="text-slate-400 block font-semibold">Acertos</span>
+                    <span className="font-bold text-emerald-600 text-xs">{st.metrics.uniqueQuestionsSolved}/{st.metrics.totalExercises}</span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setSelectedStudent(st)}
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-10 rounded-xl text-xs font-bold text-blue-700 bg-blue-50/70 border-blue-200 hover:bg-blue-100 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5 mr-1" />
+                  <span>Ver Dossiê do Aluno</span>
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Modal / Gaveta Lateral de Detalhes do Aluno */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 my-auto max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-8 space-y-6 shadow-2xl border border-slate-200 my-auto max-h-[90vh] overflow-y-auto custom-scrollbar">
             {/* Topo do Modal */}
             <div className="flex items-start justify-between border-b border-slate-100 pb-4">
               <div>

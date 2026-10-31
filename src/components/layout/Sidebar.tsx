@@ -167,13 +167,18 @@ export function Sidebar({ initialTabs }: SidebarProps) {
         .filter(item => item.href !== "/" && (pathname.startsWith(`${item.href}/`) || pathname === item.href))
         .sort((a, b) => b.href.length - a.href.length)[0]?.href
 
-  // Conteúdo compartilhado da navegação (usado tanto no desktop quanto no drawer mobile)
-  const renderNavContent = (isMobile = false) => (
+  // Conteúdo compartilhado da navegação (usado tanto no desktop quanto no drawer mobile e tablet rail)
+  const renderNavContent = (isMobile = false, isRail = false) => (
     <>
-      <nav className="flex-1 p-4 space-y-6 overflow-y-auto">
+      <nav className="flex-1 p-3 lg:p-4 space-y-6 overflow-y-auto custom-scrollbar">
         {visibleGroups.map((group) => (
           <div key={group.label}>
-            <h3 className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            <h3
+              className={cn(
+                "px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2",
+                isRail && "hidden lg:block text-center lg:text-left"
+              )}
+            >
               {group.label}
             </h3>
             <div className="space-y-1">
@@ -183,20 +188,25 @@ export function Sidebar({ initialTabs }: SidebarProps) {
                   <Link
                     key={item.href}
                     href={item.href}
+                    title={item.label}
                     onClick={() => {
                       if (isMobile) setIsMobileMenuOpen(false)
                     }}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium border border-transparent",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium border border-transparent min-h-[44px]",
+                      isRail ? "justify-center lg:justify-start" : "justify-start",
                       isActive 
                         ? "bg-blue-600/10 text-blue-700 font-bold border-blue-500/20 shadow-xs" 
                         : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
                     )}
                   >
-                    <item.icon className={cn("w-4 h-4", isActive ? "text-blue-600" : "text-slate-400")} />
-                    <span className="truncate">{item.label}</span>
+                    <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-blue-600" : "text-slate-400")} />
+                    <span className={cn("truncate", isRail ? "hidden lg:inline" : "inline")}>{item.label}</span>
                     {role === "admin" && item.href !== "/admin" && !item.enabled && (
-                      <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                      <span className={cn(
+                        "ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 shrink-0",
+                        isRail && "hidden lg:inline"
+                      )}>
                         Oculta
                       </span>
                     )}
@@ -209,27 +219,31 @@ export function Sidebar({ initialTabs }: SidebarProps) {
       </nav>
       
       {/* Botão Sobre o Malba */}
-      <div className="px-4 py-2 border-t border-slate-200/60">
+      <div className="px-3 lg:px-4 py-2 border-t border-slate-200/60">
         <button
           onClick={() => {
             setIsAboutOpen(true)
             if (isMobile) setIsMobileMenuOpen(false)
           }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer"
+          title="Sobre o Malba"
+          className={cn(
+            "w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 rounded-xl transition-colors cursor-pointer min-h-[40px]",
+            isRail ? "justify-center lg:justify-start" : "justify-start"
+          )}
         >
-          <HelpCircle className="w-4 h-4 text-slate-400" />
-          <span>Sobre o Malba</span>
+          <HelpCircle className="w-4 h-4 shrink-0 text-slate-400" />
+          <span className={cn(isRail ? "hidden lg:inline" : "inline")}>Sobre o Malba</span>
         </button>
       </div>
 
       {/* Rodapé com Informações do Usuário */}
-      <div className="p-4 border-t border-slate-200/70 bg-slate-100/50">
-        <div className="flex items-center justify-between">
+      <div className="p-3 lg:p-4 border-t border-slate-200/70 bg-slate-100/50">
+        <div className={cn("flex items-center", isRail ? "justify-center lg:justify-between flex-col lg:flex-row gap-2" : "justify-between")}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center shadow-xs text-xs font-bold text-white">
+            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center shadow-xs text-xs font-bold text-white shrink-0">
               {getInitials(name)}
             </div>
-            <div>
+            <div className={cn(isRail ? "hidden lg:block" : "block")}>
               <p className="text-sm font-bold text-slate-900 truncate max-w-[120px]">{name}</p>
               <p className="text-[10px] text-slate-500 font-medium">
                 {role === 'admin' ? 'Admin' : role === 'professor' ? 'Docente' : 'Discente'} &bull; {matricula}
@@ -244,7 +258,7 @@ export function Sidebar({ initialTabs }: SidebarProps) {
               useAppStore.getState().resetUserProgress()
               signOut({ callbackUrl: "/login" })
             }}
-            className="p-2 bg-transparent text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
+            className="p-2 bg-transparent text-slate-400 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors cursor-pointer shrink-0"
             title="Sair da Plataforma"
           >
             <LogOut className="w-4 h-4" />
@@ -253,6 +267,34 @@ export function Sidebar({ initialTabs }: SidebarProps) {
       </div>
     </>
   )
+
+  // Itens para a Bottom Navigation Bar móvel (exclusiva para smartphones)
+  const isWorkspace = pathname.startsWith("/workspace/")
+
+  const getBottomNavItems = () => {
+    if (role === "admin") {
+      return [
+        { href: "/admin", label: "Admin", icon: ShieldCheck },
+        { href: "/", label: "Início", icon: Compass },
+        { href: "/explorador", label: "Catálogo", icon: BookOpen },
+        { href: "/materias", label: "Matérias", icon: PlayCircle },
+      ]
+    }
+    if (role === "professor") {
+      return [
+        { href: "/", label: "Início", icon: Compass },
+        { href: "/professor/turmas", label: "Turmas", icon: Users },
+        { href: "/professor", label: "Portal", icon: GraduationCap },
+        { href: "/materias", label: "Matérias", icon: PlayCircle },
+      ]
+    }
+    return [
+      { href: "/", label: "Início", icon: Compass },
+      { href: "/explorador", label: "Catálogo", icon: BookOpen },
+      { href: "/materias", label: "Matérias", icon: PlayCircle },
+      { href: "/aluno/caderno", label: "Caderno", icon: BookMarked },
+    ]
+  }
 
   return (
     <>
@@ -303,21 +345,78 @@ export function Sidebar({ initialTabs }: SidebarProps) {
             </div>
 
             {/* Itens de Navegação Mobile */}
-            {renderNavContent(true)}
+            {renderNavContent(true, false)}
           </aside>
         </div>
       )}
 
-      {/* ================= 3. SIDEBAR FIXA TRADICIONAL (DESKTOP) ================= */}
-      <aside className="hidden md:flex w-64 bg-[#F8FAFC] text-slate-800 flex-col h-full shrink-0 shadow-xs z-20 relative border-r border-slate-200/80 font-sans transition-colors duration-300">
-        {/* Área da Logo Wordmark Integrada */}
-        <div className="p-6 border-b border-slate-200/70">
-          <Logo size="sm" variant="light" showBadge={false} />
+      {/* ================= 3. SIDEBAR RESPONSIVA (TABLET RAIL MD:W-20 + DESKTOP LG:W-64) ================= */}
+      <aside className="hidden md:flex md:w-20 lg:w-64 bg-[#F8FAFC] text-slate-800 flex-col h-full shrink-0 shadow-xs z-20 relative border-r border-slate-200/80 font-sans transition-all duration-300">
+        {/* Área da Logo Wordmark: Ícone compacto no tablet e Completo no desktop */}
+        <div className="p-4 lg:p-6 border-b border-slate-200/70 flex justify-center lg:justify-start">
+          <div className="hidden lg:block">
+            <Logo size="sm" variant="light" showBadge={false} />
+          </div>
+          <div className="lg:hidden flex items-center justify-center">
+            <Logo size="sm" variant="light" showText={false} />
+          </div>
         </div>
         
-        {/* Navegação Desktop */}
-        {renderNavContent(false)}
+        {/* Navegação Tablet Rail + Desktop */}
+        {renderNavContent(false, true)}
       </aside>
+
+      {/* ================= 4. BARRA INFERIOR MOBILE (BOTTOM NAVIGATION BAR) ================= */}
+      {!isWorkspace && (
+        <nav
+          className="md:hidden fixed bottom-0 inset-x-0 h-16 bg-white/95 backdrop-blur-md border-t border-slate-200/90 z-40 flex items-center justify-around px-1.5 pb-safe shadow-[0_-4px_16px_rgba(0,0,0,0.04)]"
+          aria-label="Navegação Rápida Inferior"
+        >
+          {getBottomNavItems().map((item) => {
+            const isItemActive = item.href === activeHref
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl transition-all min-h-[44px]",
+                  isItemActive
+                    ? "text-blue-600 font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                <div
+                  className={cn(
+                    "p-1 rounded-xl transition-all",
+                    isItemActive ? "bg-blue-50 text-blue-600 scale-105" : "text-slate-400"
+                  )}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] tracking-tight leading-tight mt-0.5 truncate max-w-[64px]">
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
+
+          {/* Botão Mais / Menu para abrir o Drawer */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center py-1 px-1 rounded-xl text-slate-500 hover:text-slate-800 transition-all min-h-[44px] cursor-pointer"
+            aria-label="Mais opções e configurações"
+          >
+            <div className="p-1 rounded-xl text-slate-400">
+              <Menu className="w-5 h-5" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-tight mt-0.5 font-medium">
+              Mais
+            </span>
+          </button>
+        </nav>
+      )}
 
       {/* Modal Institucional "Sobre o Malba" */}
       <AboutMalbaModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />

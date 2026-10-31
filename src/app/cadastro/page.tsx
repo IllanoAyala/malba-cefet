@@ -460,7 +460,7 @@ export default function CadastroPage() {
                       placeholder="Seu nome completo"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="pl-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                      className="pl-9 h-10 text-base sm:text-xs bg-slate-50 border-slate-200 rounded-xl"
                       required
                     />
                   </div>
@@ -473,13 +473,13 @@ export default function CadastroPage() {
                     <span className="text-[10px] text-blue-600 font-semibold">Recomendado CEFET</span>
                   </div>
                   <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <Input
                       type="email"
                       placeholder={role === "aluno" ? "exemplo@aluno.cefetmg.br ou outro" : "exemplo@cefetmg.br ou outro"}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="pl-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                      className="pl-9 h-10 text-base sm:text-xs bg-slate-50 border-slate-200 rounded-xl"
                       required
                     />
                   </div>
@@ -491,13 +491,13 @@ export default function CadastroPage() {
                     {role === "aluno" ? "Matrícula do Aluno (ou CPF/Usuário)" : "Matrícula / SIAPE do Docente"}
                   </label>
                   <div className="relative">
-                    <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <Input
                       type="text"
                       placeholder={role === "aluno" ? "Ex: 2024100123" : "Ex: 1984210"}
                       value={matricula}
                       onChange={(e) => setMatricula(e.target.value)}
-                      className="pl-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                      className="pl-9 h-10 text-base sm:text-xs bg-slate-50 border-slate-200 rounded-xl"
                       required
                     />
                   </div>
@@ -507,19 +507,19 @@ export default function CadastroPage() {
                 <div className="space-y-0.5">
                   <label className="text-xs font-bold text-slate-700">Senha de Acesso</label>
                   <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Mínimo 4 caracteres"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-9 pr-9 h-9 text-xs bg-slate-50 border-slate-200 rounded-xl"
+                      className="pl-9 pr-10 h-10 text-base sm:text-xs bg-slate-50 border-slate-200 rounded-xl"
                       required
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
+                      className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                       tabIndex={-1}
                       title={showPassword ? "Ocultar senha" : "Ver senha"}
                       aria-label={showPassword ? "Ocultar senha" : "Ver senha"}

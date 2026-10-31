@@ -174,7 +174,7 @@ export default function DashboardPage() {
   const activeStepData = ARCO_STEPS[selectedStep]
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 animate-in fade-in duration-300 font-sans pb-24 md:pb-8">
       {/* ================= 1. CABEÇALHO BOAS-VINDAS & MÉTRICAS PRINCIPAIS ================= */}
       <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs relative overflow-hidden flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         {/* Lado Esquerdo: Identidade + Boas-vindas */}
@@ -366,7 +366,7 @@ export default function DashboardPage() {
               <Button
                 onClick={handlePraticarAleatoria}
                 disabled={isLoading}
-                className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs h-10 px-4 rounded-xl shrink-0 shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-80"
+                className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs h-10 px-4 rounded-xl shrink-0 shadow-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-80 w-full sm:w-auto"
               >
                 {isLoading ? (
                   <>
