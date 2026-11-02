@@ -24,6 +24,7 @@ model Question {
   interactionLogs     InteractionLog[]
   feedbacks           StudentFeedback[]
   reports             Report[]
+  aiReports           AiMessageReport[]
 }
 
 // Telemetria para a Pesquisa: Captura as interações com a IA
@@ -68,9 +69,10 @@ model User {
   consentAt     DateTime?
   createdAt     DateTime @default(now())
 
-  teacherClasses TeacherClass[]
-  accessSessions AccessSession[]
-  activityEvents ActivityEvent[]
+  teacherClasses   TeacherClass[]
+  accessSessions   AccessSession[]
+  activityEvents   ActivityEvent[]
+  aiMessageReports AiMessageReport[]
 }
 
 // Códigos OTP de Verificação por E-mail (Cadastro e Recuperação de Senha)
@@ -154,4 +156,27 @@ model TokenUsageLog {
   resetRequestsStr     String?
   sessionId            String?
   createdAt            DateTime @default(now())
+}
+
+// Relatos de falhas pedagógicas ou erros nas respostas da IA (Alucinação, quebra socrática, erro de cálculo, KaTeX)
+model AiMessageReport {
+  id             String    @id @default(uuid())
+  questionId     String?
+  userId         String?
+  userMatricula  String?
+  userRole       String?
+  messageContent String    // Conteúdo da resposta da IA que continha erro
+  userPrompt     String?   // Mensagem anterior do usuário que contextualiza o erro
+  reason         String    // math_error, gave_direct_answer, katex_formatting, hallucination, other
+  details        String?   // Explicação adicional fornecida pelo aluno/professor
+  socraticStep   Int?      // Etapa do Arco de Maguerez no momento (0 a 4)
+  status         String    @default("pending") // pending, reviewed, resolved
+  adminNotes     String?   // Anotações da equipe de pesquisa/admin
+  createdAt      DateTime  @default(now())
+
+  question       Question? @relation(fields: [questionId], references: [id], onDelete: SetNull)
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([questionId])
 }

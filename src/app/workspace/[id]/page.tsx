@@ -27,6 +27,7 @@ import {
   Calculator
 } from "lucide-react"
 import { getModuleForTopic } from "@/data/studyMaterials"
+import { ReportAiModal } from "@/components/features/ReportAiModal"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import remarkMath from "remark-math"
@@ -78,6 +79,27 @@ export default function WorkspacePage() {
     "4. Hipóteses de Solução",
     "5. Aplicação à Realidade"
   ]
+
+  const [reportingAiMessage, setReportingAiMessage] = useState<{
+    content: string
+    userPrompt: string | null
+    step: number
+  } | null>(null)
+
+  const handleOpenReportAiModal = (msg: { content: string }, idx: number) => {
+    let lastUserPrompt: string | null = null
+    for (let i = idx - 1; i >= 0; i--) {
+      if (chatHistory[i].role === 'user') {
+        lastUserPrompt = chatHistory[i].content
+        break
+      }
+    }
+    setReportingAiMessage({
+      content: msg.content,
+      userPrompt: lastUserPrompt,
+      step: currentSocraticStep,
+    })
+  }
 
   const [selectedOption, setSelectedOption] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<'none' | 'success' | 'error'>('none')
@@ -729,31 +751,47 @@ export default function WorkspacePage() {
           {chatHistory.map((msg, idx) => (
             <div 
               key={idx} 
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} ${msg.role === 'system' ? 'justify-center' : ''}`}
+              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'} ${msg.role === 'system' ? 'items-center' : ''}`}
             >
               {msg.role === 'system' ? (
                 <div className="bg-slate-200 text-slate-600 text-xs py-1 px-3 rounded-full my-2">
                   {msg.content}
                 </div>
               ) : (
-                <div 
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm prose prose-sm max-w-none
-                    ${msg.role === 'user' 
-                      ? 'bg-blue-600 text-white rounded-br-none prose-p:text-white prose-strong:text-white prose-a:text-white' 
-                      : 'bg-white border text-slate-800 shadow-sm rounded-bl-none prose-p:text-slate-800 prose-strong:text-slate-800'
-                    }
-                  `}
-                >
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[[rehypeKatex, { strict: false }]]}
-                    components={{
-                      p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />
-                    }}
+                <>
+                  <div 
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm prose prose-sm max-w-none
+                      ${msg.role === 'user' 
+                        ? 'bg-blue-600 text-white rounded-br-none prose-p:text-white prose-strong:text-white prose-a:text-white' 
+                        : 'bg-white border text-slate-800 shadow-sm rounded-bl-none prose-p:text-slate-800 prose-strong:text-slate-800'
+                      }
+                    `}
                   >
-                    {normalizeMathContent(msg.content)}
-                  </ReactMarkdown>
-                </div>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[[rehypeKatex, { strict: false }]]}
+                      components={{
+                        p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />
+                      }}
+                    >
+                      {normalizeMathContent(msg.content)}
+                    </ReactMarkdown>
+                  </div>
+
+                  {msg.role !== 'user' && (
+                    <div className="flex items-center gap-2 mt-1 px-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReportAiModal(msg, idx)}
+                        className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-amber-600 transition-colors cursor-pointer group py-0.5"
+                        title="Reportar resposta incorreta, cálculo errado ou quebra do método socrático"
+                      >
+                        <Flag className="w-3 h-3 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                        <span>Reportar resposta</span>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
@@ -1051,6 +1089,15 @@ export default function WorkspacePage() {
           </div>
         </div>
       )}
+      {/* Modal para Reportar Falha na Resposta do Tutor Malba */}
+      <ReportAiModal
+        isOpen={reportingAiMessage !== null}
+        onClose={() => setReportingAiMessage(null)}
+        messageContent={reportingAiMessage?.content || ""}
+        userPrompt={reportingAiMessage?.userPrompt}
+        questionId={question?.id || questionId}
+        socraticStep={reportingAiMessage?.step ?? currentSocraticStep}
+      />
     </div>
   )
 }

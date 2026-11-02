@@ -27,11 +27,13 @@ import {
   BookOpen,
   SlidersHorizontal,
   Pencil,
+  Flag,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { QuestionReviewTab } from "@/components/admin/QuestionReviewTab"
 import { TabManagementTab } from "@/components/admin/TabManagementTab"
 import { EditUserModal } from "@/components/admin/EditUserModal"
+import { AiReportsTab } from "@/components/admin/AiReportsTab"
 
 interface MonitoredUser {
   id: string
@@ -73,7 +75,8 @@ export default function AdminDashboardPage() {
   const router = useRouter()
 
   const [isLoading, setIsLoading] = useState(true)
-  const [adminTab, setAdminTab] = useState<"monitoring" | "questions" | "tabs">("monitoring")
+  const [adminTab, setAdminTab] = useState<"monitoring" | "questions" | "ai-reports" | "tabs">("monitoring")
+  const [pendingAiReportsCount, setPendingAiReportsCount] = useState(0)
   const [summary, setSummary] = useState<any>(null)
   const [tokenMetrics, setTokenMetrics] = useState<any>(null)
   const [users, setUsers] = useState<MonitoredUser[]>([])
@@ -140,6 +143,17 @@ export default function AdminDashboardPage() {
         setTokenMetrics(data.tokenMetrics || null)
         setUsers(data.users)
         setRecentLogs(data.recentLogs || [])
+      }
+
+      // Busca contagem de relatos pendentes da IA
+      try {
+        const reportsRes = await fetch("/api/admin/ai-reports?status=pending")
+        if (reportsRes.ok) {
+          const reportsData = await reportsRes.json()
+          setPendingAiReportsCount(reportsData.stats?.pending || 0)
+        }
+      } catch (err) {
+        // silencioso
       }
     } catch (err) {
       console.error("Erro ao carregar painel admin:", err)
@@ -367,6 +381,24 @@ export default function AdminDashboardPage() {
 
         <button
           type="button"
+          onClick={() => setAdminTab("ai-reports")}
+          className={`pb-3 px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+            adminTab === "ai-reports"
+              ? "border-amber-600 text-amber-700 bg-amber-50/30 rounded-t-xl"
+              : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-t-xl"
+          }`}
+        >
+          <Flag className="w-4 h-4 text-amber-500" />
+          <span>Auditoria &amp; Relatos da IA</span>
+          {pendingAiReportsCount > 0 && (
+            <span className="ml-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              {pendingAiReportsCount} novos
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setAdminTab("tabs")}
           className={`pb-3 px-4 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
             adminTab === "tabs"
@@ -384,6 +416,8 @@ export default function AdminDashboardPage() {
 
       {adminTab === "questions" ? (
         <QuestionReviewTab />
+      ) : adminTab === "ai-reports" ? (
+        <AiReportsTab />
       ) : adminTab === "tabs" ? (
         <TabManagementTab />
       ) : (
