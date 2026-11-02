@@ -23,8 +23,7 @@ import {
   Landmark, 
   Award, 
   FileText,
-  HelpCircle,
-  Calculator
+  HelpCircle
 } from "lucide-react"
 import { getModuleForTopic } from "@/data/studyMaterials"
 import { ReportAiModal } from "@/components/features/ReportAiModal"
@@ -823,12 +822,8 @@ export default function WorkspacePage() {
           </div>
 
           {/* Barra de Símbolos Matemáticos & Guia de Digitação */}
-          <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100">
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5 text-xs">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-0.5">
-                <Calculator className="w-3.5 h-3.5 text-slate-500" />
-                <span>Símbolos:</span>
-              </span>
+          <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-1">
               {[
                 { label: '√', val: '√' },
                 { label: 'x²', val: '²' },
@@ -845,7 +840,7 @@ export default function WorkspacePage() {
                   key={sym.label}
                   type="button"
                   onClick={() => insertSymbol(sym.val)}
-                  className="h-8 min-w-[32px] px-2 rounded-lg bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-700 border border-slate-200 hover:border-blue-600 text-xs font-mono font-bold transition-all shadow-2xs cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
+                  className="h-7 min-w-[28px] px-1.5 rounded-lg bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-700 border border-slate-200 hover:border-blue-600 text-xs font-mono font-bold transition-all shadow-2xs cursor-pointer flex items-center justify-center shrink-0 active:scale-95"
                   title={`Inserir ${sym.label}`}
                 >
                   {sym.label}
@@ -856,11 +851,11 @@ export default function WorkspacePage() {
             <button
               type="button"
               onClick={() => setShowMathHelp(prev => !prev)}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg border border-transparent hover:border-blue-200 transition-colors cursor-pointer shrink-0 min-h-[32px]"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-blue-700 hover:bg-blue-50 px-2 py-1 rounded-lg border border-transparent hover:border-blue-200 transition-colors cursor-pointer shrink-0 ml-auto"
               title="Ajuda sobre como digitar fórmulas"
             >
               <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
-              <span className="hidden sm:inline">Como digitar?</span>
+              <span>Como digitar?</span>
             </button>
           </div>
 
