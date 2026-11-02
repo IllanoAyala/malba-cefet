@@ -40,6 +40,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
+        // Migração automática transparente: se a conta ainda estava em texto puro (legada),
+        // atualiza imediatamente para hash Bcrypt com salt no banco de dados.
+        if (!isBcryptHash) {
+          try {
+            const upgradedHash = await bcrypt.hash(password, 10)
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { passwordHash: upgradedHash },
+            })
+          } catch (upgradeErr) {
+            console.error("Falha ao atualizar hash bcrypt de usuário legado:", upgradeErr)
+          }
+        }
+
         if (user.status === "pending") {
           throw new Error("PENDING_APPROVAL")
         }

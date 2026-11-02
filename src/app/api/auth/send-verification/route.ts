@@ -98,7 +98,9 @@ export async function POST(req: Request) {
       purpose,
     })
 
-    const isDevMode = !process.env.RESEND_API_KEY || (emailResult as any)?.devMode
+    // devCode só é retornado se for ambiente local de desenvolvimento (nunca em produção)
+    const isLocalDev = process.env.NODE_ENV !== "production"
+    const isDevMode = isLocalDev && (!process.env.RESEND_API_KEY || (emailResult as any)?.devMode)
 
     return NextResponse.json({
       success: true,

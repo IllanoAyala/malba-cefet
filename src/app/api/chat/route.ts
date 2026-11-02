@@ -2,6 +2,27 @@ import { streamText } from 'ai';
 import { groq } from '@ai-sdk/groq';
 import { google } from '@ai-sdk/google';
 import { prisma } from '@/lib/prisma';
+import { auth } from '@/auth';
+
+// Rate limiting em memória para proteger cota de tokens (15 requisições por minuto por usuário)
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_REQUESTS_PER_WINDOW = 15;
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(key) || [];
+  const validTimestamps = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+
+  if (validTimestamps.length >= MAX_REQUESTS_PER_WINDOW) {
+    rateLimitMap.set(key, validTimestamps);
+    return false;
+  }
+
+  validTimestamps.push(now);
+  rateLimitMap.set(key, validTimestamps);
+  return true;
+}
 
 // Permitir streaming de longa duração
 export const maxDuration = 30;
@@ -17,6 +38,29 @@ interface QuestionPayload {
 }
 
 export async function POST(req: Request) {
+  // 1. Verificação de Autenticação
+  const session = await auth();
+  if (!session || !session.user) {
+    return new Response(JSON.stringify({ error: "Acesso restrito. Faça login para interagir com o tutor Malba." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // 2. Proteção de Taxa (Rate Limit) por Usuário
+  const userKey = (session.user as any)?.id || (session.user as any)?.matricula || "user";
+  if (!checkRateLimit(userKey)) {
+    return new Response(
+      JSON.stringify({
+        error: "Você enviou muitas mensagens em sequência rápida. Aguarde alguns instantes antes de enviar a próxima pergunta para o tutor."
+      }),
+      {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
   const {
     messages,
     currentSocraticStep = 0,
