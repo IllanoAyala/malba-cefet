@@ -38,3 +38,28 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
+
+export async function DELETE(req: Request) {
+  try {
+    const session = await ensureAdmin()
+    if (!session) {
+      return NextResponse.json({ error: "Acesso negado. Apenas administradores." }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get("id")
+
+    if (!id) {
+      return NextResponse.json({ error: "ID é obrigatório." }, { status: 400 })
+    }
+
+    await prisma.report.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error("Admin Report DELETE Error:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}

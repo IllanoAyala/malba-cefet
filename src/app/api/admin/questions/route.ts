@@ -23,6 +23,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url)
     const yearParam = searchParams.get("ano")
     const topicParam = searchParams.get("topico")
+    const reportStatusParam = searchParams.get("reportStatus") || "pending"
     const search = (searchParams.get("q") || "").trim().toLowerCase()
 
     const where: any = {}
@@ -33,11 +34,17 @@ export async function GET(req: Request) {
       where.topico_bncc = topicParam
     }
 
+    const reportWhere: any = {}
+    if (reportStatusParam !== "all") {
+      reportWhere.status = reportStatusParam
+    }
+
     const questions = await prisma.question.findMany({
       where,
       orderBy: [{ ano_enem: "desc" }, { id: "asc" }],
       include: {
         reports: {
+          where: reportWhere,
           select: {
             id: true,
             description: true,

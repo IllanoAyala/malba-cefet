@@ -197,9 +197,13 @@ export function QuestionReviewTab() {
             return q
           })
         )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || "Erro ao marcar chamado como resolvido.")
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao resolver reporte:", err)
+      alert(err.message || "Erro de conexão ao resolver reporte.")
     } finally {
       setResolvingReportId(null)
     }
@@ -210,7 +214,9 @@ export function QuestionReviewTab() {
     if (yearFilter !== "all" && q.ano_enem !== Number(yearFilter)) return false
     if (topicFilter !== "all" && q.topico_bncc !== topicFilter) return false
     if (gradeFilter !== "all" && q.ano_ensino_medio !== gradeFilter) return false
-    if (onlyReported && (!q.reports || q.reports.length === 0)) return false
+
+    const pendingReports = (q.reports || []).filter((r) => r.status === "pending" || !r.status)
+    if (onlyReported && pendingReports.length === 0) return false
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
@@ -221,7 +227,10 @@ export function QuestionReviewTab() {
     return true
   })
 
-  const totalReported = questions.filter((q) => q.reports && q.reports.length > 0).length
+  const totalReported = questions.filter((q) => {
+    const pendingReports = (q.reports || []).filter((r) => r.status === "pending" || !r.status)
+    return pendingReports.length > 0
+  }).length
 
   return (
     <div className="space-y-6">
@@ -380,7 +389,8 @@ export function QuestionReviewTab() {
       ) : (
         <div className="space-y-6">
           {filteredQuestions.map((q, idx) => {
-            const hasPendingReports = q.reports && q.reports.length > 0
+            const pendingReports = (q.reports || []).filter((r) => r.status === "pending" || !r.status)
+            const hasPendingReports = pendingReports.length > 0
             return (
               <div
                 key={q.id}
@@ -441,10 +451,10 @@ export function QuestionReviewTab() {
                         <span>Relato de Erro Enviado por Aluno:</span>
                       </div>
                       <span className="text-[10px] text-amber-700 font-medium">
-                        {q.reports?.length} chamado(s) aberto(s)
+                        {pendingReports.length} chamado(s) aberto(s)
                       </span>
                     </div>
-                    {q.reports?.map((r) => (
+                    {pendingReports.map((r) => (
                       <div
                         key={r.id}
                         className="bg-white p-3 rounded-xl border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
