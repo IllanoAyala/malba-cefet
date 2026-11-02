@@ -11,7 +11,8 @@ import {
   Info, 
   HelpCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  ArrowRight
 } from "lucide-react"
 import { SocraticChatPreview } from "@/components/features/SocraticChatPreview"
 import { Logo } from "@/components/ui/Logo"
@@ -115,10 +116,17 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={() => setIsAboutOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 bg-white/70 border border-slate-200 hover:text-blue-700 hover:border-blue-200 hover:bg-blue-50/60 transition-colors cursor-pointer"
+          className="group inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-full text-xs font-bold text-slate-700 bg-white/90 hover:bg-white border border-slate-200/90 hover:border-blue-300 shadow-2xs hover:shadow-md hover:shadow-blue-500/10 hover:text-blue-700 transition-all duration-200 cursor-pointer backdrop-blur-md active:scale-95"
+          title="Saiba mais sobre a origem e o propósito do Projeto Malba"
         >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span>Por que Malba?</span>
+          <span className="w-5 h-5 rounded-full bg-blue-50 border border-blue-200/60 text-blue-600 group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 flex items-center justify-center transition-all duration-200 shadow-2xs">
+            <HelpCircle className="w-3.5 h-3.5" />
+          </span>
+          <span className="tracking-tight">Por que Malba?</span>
+          <span className="hidden sm:inline-flex items-center text-[10px] font-bold text-blue-600 bg-blue-50 group-hover:bg-blue-100 group-hover:text-blue-700 px-1.5 py-0.5 rounded-full transition-colors">
+            Conheça
+          </span>
+          <ArrowRight className="w-3 h-3 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
         </button>
       </header>
 
