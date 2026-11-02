@@ -409,8 +409,8 @@ export function QuestionReviewTab() {
               className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500"
             >
               <option value="all">Status: Todas</option>
-              <option value="active">🟢 Apenas Ativas</option>
-              <option value="inactive">🔒 Em Correção (Ocultas)</option>
+              <option value="active">Apenas Ativas</option>
+              <option value="inactive">Em Correção (Ocultas)</option>
             </select>
           </div>
         </div>
@@ -802,11 +802,11 @@ export function QuestionReviewTab() {
                         <span className="text-xs font-bold text-slate-800">Status de Disponibilidade</span>
                         {editAtivo ? (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            🟢 Ativa (Visível para alunos)
+                            Ativa (Visível para alunos)
                           </span>
                         ) : (
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                            🔒 Em Correção (Oculta para alunos)
+                            Em Correção (Oculta para alunos)
                           </span>
                         )}
                       </div>

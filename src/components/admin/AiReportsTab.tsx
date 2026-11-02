@@ -608,9 +608,9 @@ export function AiReportsTab() {
                           disabled={isSaving}
                           className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-800 shadow-2xs focus:outline-hidden focus:ring-2 focus:ring-blue-500 cursor-pointer"
                         >
-                          <option value="pending">🟡 Pendente</option>
-                          <option value="reviewed">🔵 Em Análise</option>
-                          <option value="resolved">🟢 Resolvido</option>
+                          <option value="pending">Pendente</option>
+                          <option value="reviewed">Em Análise</option>
+                          <option value="resolved">Resolvido</option>
                         </select>
                       </div>
 

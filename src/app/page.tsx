@@ -197,9 +197,8 @@ export default function DashboardPage() {
           </div>
 
           <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Olá, {session?.user?.name?.split(" ")[0] || "Estudante"}!</span>
-              <span className="inline-block origin-[70%_70%]">👋</span>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Olá, {session?.user?.name?.split(" ")[0] || "Estudante"}!
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-light mt-0.5">
               Desenvolva sua autonomia matemática com mediação socrática guiada pelo Arco de Maguerez, videoaulas do GTMAT e questões do ENEM.
@@ -275,7 +274,7 @@ export default function DashboardPage() {
                     }`}
                   >
                     {hasPracticedToday
-                      ? "Mantida hoje! 🔥"
+                      ? "Mantida hoje!"
                       : `${missionCompletedCount}/3 da Missão`}
                   </span>
                 </>
@@ -348,10 +347,10 @@ export default function DashboardPage() {
                         />
                         <span>
                           {hasPracticedToday
-                            ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva • Mantida hoje! 🔥`
+                            ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva • Mantida hoje!`
                             : streakDays > 0
                             ? `${streakDays} ${streakDays === 1 ? "Dia" : "Dias"} de Ofensiva • Conclua as 3 para manter`
-                            : "Complete as 3 questões para iniciar a ofensiva! 🔥"}
+                            : "Complete as 3 questões para iniciar a ofensiva!"}
                         </span>
                       </span>
                     </>
@@ -694,13 +693,6 @@ export default function DashboardPage() {
                 <span className="font-bold">Intervenção da IA:</span> {activeStepData.iaRole}
               </div>
             </div>
-
-            <Link href="/professor/tutorial" className="block pt-1 text-center">
-              <span className="text-xs font-bold text-blue-600 hover:underline inline-flex items-center gap-1 justify-center">
-                <span>Ler Tutorial Docente</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
-            </Link>
           </div>
         </div>
       </div>
