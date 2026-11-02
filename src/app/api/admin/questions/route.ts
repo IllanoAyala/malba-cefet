@@ -109,13 +109,16 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json()
-    const { id, enunciado, alternativas, alternativa_correta, topico_bncc, habilidade_enem, ano_ensino_medio, ano_enem } = body
+    const { id, enunciado, alternativas, alternativa_correta, topico_bncc, habilidade_enem, ano_ensino_medio, ano_enem, ativo } = body
 
     if (!id) {
       return NextResponse.json({ error: "ID da questão é obrigatório." }, { status: 400 })
     }
 
     const dataToUpdate: any = {}
+    if (typeof ativo === "boolean") {
+      dataToUpdate.ativo = ativo
+    }
     if (typeof enunciado === "string") dataToUpdate.enunciado = enunciado.trim()
     if (alternativas != null) {
       dataToUpdate.alternativas = typeof alternativas === "string" ? alternativas : JSON.stringify(alternativas)

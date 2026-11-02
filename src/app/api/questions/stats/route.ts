@@ -5,9 +5,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const total = await prisma.question.count();
+    const total = await prisma.question.count({
+      where: { ativo: true },
+    });
     const revisadas = await prisma.question.count({
-      where: { revisado_ia: true }
+      where: { revisado_ia: true, ativo: true },
     });
     const pendentes = total - revisadas;
 

@@ -9,6 +9,7 @@ import {
   Edit3,
   ExternalLink,
   Eye,
+  EyeOff,
   Code,
   Save,
   X,
@@ -53,6 +54,8 @@ interface QuestionItem {
   topico_bncc: string
   habilidade_enem: string
   dicas_socraticas?: any
+  revisado_ia?: boolean
+  ativo?: boolean
   reports?: QuestionReport[]
   _count?: {
     interactionLogs: number
@@ -71,6 +74,7 @@ export function QuestionReviewTab() {
   const [yearFilter, setYearFilter] = useState<string>("all")
   const [topicFilter, setTopicFilter] = useState<string>("all")
   const [gradeFilter, setGradeFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all") // "all" | "active" | "inactive"
   const [onlyReported, setOnlyReported] = useState(false)
 
   // Modal de Edição
@@ -82,13 +86,42 @@ export function QuestionReviewTab() {
   const [editHabilidade, setEditHabilidade] = useState("")
   const [editAnoEM, setEditAnoEM] = useState("1º Ano")
   const [editAnoEnem, setEditAnoEnem] = useState(2025)
+  const [editAtivo, setEditAtivo] = useState(true)
   const [activeModalTab, setActiveModalTab] = useState<"edit" | "preview">("edit")
   const [isSaving, setIsSaving] = useState(false)
   const [saveSuccessMsg, setSaveSuccessMsg] = useState("")
   const [saveErrorMsg, setSaveErrorMsg] = useState("")
 
+  // Chave rápida de Ativar/Desativar
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null)
+
   // Resolução de Reports
   const [resolvingReportId, setResolvingReportId] = useState<string | null>(null)
+
+  const handleToggleActive = async (q: QuestionItem) => {
+    const newStatus = q.ativo === false ? true : false
+    setTogglingActiveId(q.id)
+    try {
+      const res = await fetch("/api/admin/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: q.id, ativo: newStatus }),
+      })
+      if (res.ok) {
+        setQuestions((prev) =>
+          prev.map((item) => (item.id === q.id ? { ...item, ativo: newStatus } : item))
+        )
+      } else {
+        const data = await res.json().catch(() => ({}))
+        alert(data.error || "Erro ao atualizar status da questão.")
+      }
+    } catch (err: any) {
+      console.error("Erro ao alternar status da questão:", err)
+      alert(err.message || "Erro de conexão ao alternar status.")
+    } finally {
+      setTogglingActiveId(null)
+    }
+  }
 
   const fetchQuestions = async () => {
     setIsLoading(true)
@@ -130,6 +163,7 @@ export function QuestionReviewTab() {
     setEditHabilidade(q.habilidade_enem || "")
     setEditAnoEM(q.ano_ensino_medio || "1º Ano")
     setEditAnoEnem(q.ano_enem || 2025)
+    setEditAtivo(q.ativo !== false)
     setActiveModalTab("edit")
     setSaveSuccessMsg("")
     setSaveErrorMsg("")
@@ -154,6 +188,7 @@ export function QuestionReviewTab() {
           habilidade_enem: editHabilidade,
           ano_ensino_medio: editAnoEM,
           ano_enem: editAnoEnem,
+          ativo: editAtivo,
         }),
       })
 
@@ -214,6 +249,8 @@ export function QuestionReviewTab() {
     if (yearFilter !== "all" && q.ano_enem !== Number(yearFilter)) return false
     if (topicFilter !== "all" && q.topico_bncc !== topicFilter) return false
     if (gradeFilter !== "all" && q.ano_ensino_medio !== gradeFilter) return false
+    if (statusFilter === "active" && q.ativo === false) return false
+    if (statusFilter === "inactive" && q.ativo !== false) return false
 
     const pendingReports = (q.reports || []).filter((r) => r.status === "pending" || !r.status)
     if (onlyReported && pendingReports.length === 0) return false
@@ -232,6 +269,8 @@ export function QuestionReviewTab() {
     return pendingReports.length > 0
   }).length
 
+  const totalInactive = questions.filter((q) => q.ativo === false).length
+
   return (
     <div className="space-y-6">
       {/* ================= BARRA DE CONTROLE & ESTATÍSTICAS DO BANCO ================= */}
@@ -246,7 +285,7 @@ export function QuestionReviewTab() {
               Banco de Questões &amp; Revisão de Textos
             </h2>
             <p className="text-xs text-slate-500">
-              Inspecione o enunciado, imagens, fórmulas matemáticas em KaTeX e as alternativas de cada questão. Você pode editar e salvar correções diretamente no banco.
+              Inspecione o enunciado, imagens, fórmulas matemáticas em KaTeX e as alternativas de cada questão. Você pode editar, salvar correções e pausar questões em revisão para que alunos não as vejam.
             </p>
           </div>
 
@@ -255,6 +294,21 @@ export function QuestionReviewTab() {
               <FileQuestion className="w-3.5 h-3.5 text-blue-600" />
               <span>{questions.length} Questões no Total</span>
             </span>
+
+            {totalInactive > 0 && (
+              <button
+                onClick={() => setStatusFilter(statusFilter === "inactive" ? "all" : "inactive")}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  statusFilter === "inactive"
+                    ? "bg-rose-600 text-white shadow-xs"
+                    : "bg-rose-50 border border-rose-200 text-rose-800 hover:bg-rose-100"
+                }`}
+                title="Filtrar apenas questões desativadas/em correção"
+              >
+                <EyeOff className="w-3.5 h-3.5 text-rose-500" />
+                <span>{totalInactive} em Correção (Ocultas)</span>
+              </button>
+            )}
 
             {totalReported > 0 && (
               <button
@@ -283,9 +337,9 @@ export function QuestionReviewTab() {
         </div>
 
         {/* Barra de Filtros e Busca */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
           {/* Busca por texto ou ID */}
-          <div className="relative lg:col-span-2">
+          <div className="relative sm:col-span-2 lg:col-span-2 xl:col-span-2">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
@@ -311,7 +365,7 @@ export function QuestionReviewTab() {
               onChange={(e) => setYearFilter(e.target.value)}
               className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500"
             >
-              <option value="all">Todos os Anos do ENEM</option>
+              <option value="all">Todos os Anos ENEM</option>
               <option value="2025">ENEM 2025</option>
               <option value="2024">ENEM 2024</option>
             </select>
@@ -346,24 +400,40 @@ export function QuestionReviewTab() {
               <option value="3º Ano">3º Ano</option>
             </select>
           </div>
+
+          {/* Filtro Status (Ativa / Em Correção) */}
+          <div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-blue-500"
+            >
+              <option value="all">Status: Todas</option>
+              <option value="active">🟢 Apenas Ativas</option>
+              <option value="inactive">🔒 Em Correção (Ocultas)</option>
+            </select>
+          </div>
         </div>
 
         {/* Resumo de Resultados */}
         <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
           <span>
             Exibindo <strong>{filteredQuestions.length}</strong> de {questions.length} questões
-            {onlyReported && " (filtradas por relato de erro)"}
+            {onlyReported && " (com relato)"}
+            {statusFilter === "inactive" && " (em correção)"}
+            {statusFilter === "active" && " (ativas)"}
           </span>
-          {(yearFilter !== "all" || topicFilter !== "all" || gradeFilter !== "all" || searchQuery || onlyReported) && (
+          {(yearFilter !== "all" || topicFilter !== "all" || gradeFilter !== "all" || statusFilter !== "all" || searchQuery || onlyReported) && (
             <button
               onClick={() => {
                 setYearFilter("all")
                 setTopicFilter("all")
                 setGradeFilter("all")
+                setStatusFilter("all")
                 setSearchQuery("")
                 setOnlyReported(false)
               }}
-              className="text-blue-600 hover:underline font-semibold"
+              className="text-blue-600 hover:underline font-semibold cursor-pointer"
             >
               Limpar todos os filtros
             </button>
@@ -389,15 +459,48 @@ export function QuestionReviewTab() {
       ) : (
         <div className="space-y-6">
           {filteredQuestions.map((q, idx) => {
+            const isInactive = q.ativo === false
             const pendingReports = (q.reports || []).filter((r) => r.status === "pending" || !r.status)
             const hasPendingReports = pendingReports.length > 0
             return (
               <div
                 key={q.id}
                 className={`bg-white rounded-3xl border transition-all duration-200 shadow-xs overflow-hidden ${
-                  hasPendingReports ? "border-amber-300 ring-2 ring-amber-100" : "border-slate-200/80 hover:border-slate-300"
+                  isInactive
+                    ? "border-rose-300 ring-2 ring-rose-100 bg-rose-50/20"
+                    : hasPendingReports
+                    ? "border-amber-300 ring-2 ring-amber-100"
+                    : "border-slate-200/80 hover:border-slate-300"
                 }`}
               >
+                {/* Banner de Questão Oculta / Em Correção */}
+                {isInactive && (
+                  <div className="p-3 sm:px-5 bg-rose-50/90 border-b border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-rose-900">
+                    <div className="flex items-center gap-2">
+                      <EyeOff className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span className="font-semibold">
+                        Questão Desabilitada para Alunos (Em Correção)
+                      </span>
+                      <span className="text-[11px] text-rose-700 hidden md:inline">
+                        — Esta questão não será exibida no catálogo nem nos simulados dos alunos.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={togglingActiveId === q.id}
+                      onClick={() => handleToggleActive(q)}
+                      className="px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-700 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 shrink-0 self-start sm:self-auto cursor-pointer"
+                    >
+                      {togglingActiveId === q.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Eye className="w-3 h-3" />
+                      )}
+                      Publicar / Reativar
+                    </button>
+                  </div>
+                )}
+
                 {/* Cabeçalho do Card */}
                 <div className="p-4 sm:p-5 bg-slate-50/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
@@ -420,6 +523,32 @@ export function QuestionReviewTab() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {/* Botão de Alternar Status (Chave Liga/Desliga) */}
+                    <button
+                      type="button"
+                      disabled={togglingActiveId === q.id}
+                      onClick={() => handleToggleActive(q)}
+                      className={`h-8 px-2.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                        isInactive
+                          ? "bg-rose-50 border-rose-300 text-rose-700 hover:bg-rose-100"
+                          : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                      }`}
+                      title={
+                        isInactive
+                          ? "Questão desabilitada para alunos. Clique para reativar."
+                          : "Questão ativa. Clique para desabilitar enquanto você corrige."
+                      }
+                    >
+                      {togglingActiveId === q.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : isInactive ? (
+                        <EyeOff className="w-3.5 h-3.5 text-rose-600" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                      )}
+                      <span>{isInactive ? "Em Correção" : "Ativa"}</span>
+                    </button>
+
                     <Button
                       size="sm"
                       onClick={() => handleOpenEdit(q)}
@@ -666,6 +795,42 @@ export function QuestionReviewTab() {
             <div className="p-5 sm:p-6 overflow-y-auto space-y-6 flex-1">
               {activeModalTab === "edit" ? (
                 <div className="space-y-6">
+                  {/* Chave de Ativar / Desativar Questão no Modal */}
+                  <div className="flex items-center justify-between p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-800">Status de Disponibilidade</span>
+                        {editAtivo ? (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            🟢 Ativa (Visível para alunos)
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                            🔒 Em Correção (Oculta para alunos)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Desative esta opção se você ainda está corrigindo o texto, imagens ou fórmulas. Questões em correção não aparecem para alunos.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setEditAtivo(!editAtivo)}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        editAtivo ? "bg-emerald-600" : "bg-slate-300"
+                      }`}
+                      title={editAtivo ? "Clique para desativar" : "Clique para ativar"}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          editAtivo ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
                   {/* Metadados: Ano, Tópico, Série */}
                   <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
                     <div>

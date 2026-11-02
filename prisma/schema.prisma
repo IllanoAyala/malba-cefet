@@ -18,6 +18,7 @@ model Question {
   alternativa_correta String
   dicas_socraticas    String   // JSON stringificado
   revisado_ia         Boolean  @default(false)
+  ativo               Boolean  @default(true)
   createdAt           DateTime @default(now())
 
   interactionLogs     InteractionLog[]

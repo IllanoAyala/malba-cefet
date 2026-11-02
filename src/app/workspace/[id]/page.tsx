@@ -185,7 +185,7 @@ export default function WorkspacePage() {
       </div>
       <h2 className="text-xl font-bold text-slate-900">Conteúdo Não Disponível</h2>
       <p className="text-xs text-slate-600 leading-relaxed">
-        Esta questão não foi encontrada ou faz parte do currículo de uma série mais avançada que ainda não foi liberada para o seu perfil discente.
+        Esta questão está temporariamente em revisão ou não está disponível para o seu perfil.
       </p>
       <Button
         variant="blue"

@@ -13,10 +13,17 @@ export async function GET() {
 
     const allowed = getAllowedSeries(role, serie);
 
-    // Se for admin ou professor, busca todas. Se for aluno, busca apenas as séries liberadas.
-    const whereClause = (role === 'admin' || role === 'professor')
-      ? {}
-      : { ano_ensino_medio: { in: allowed } };
+    const whereClause: any = {};
+
+    // Usuários normais (alunos, professores e visitantes) só veem questões ativas
+    if (role !== 'admin') {
+      whereClause.ativo = true;
+    }
+
+    // Alunos são restritos às séries liberadas para o seu nível
+    if (role !== 'admin' && role !== 'professor') {
+      whereClause.ano_ensino_medio = { in: allowed };
+    }
 
     const questions = await prisma.question.findMany({
       where: whereClause,
